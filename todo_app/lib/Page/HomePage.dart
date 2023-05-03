@@ -299,6 +299,16 @@ class _HomePageState extends State<HomePage> {
                 width: MediaQuery.of(context).size.width,
                 height: 3,
                 color: Color.fromARGB(255, 209, 206, 206)),
+            ListTile(
+              title: Text(
+                'Recycle Bin',
+                style: TextStyle(fontSize: 16),
+              ),
+              trailing: Icon(Icons.recycling_outlined),
+              onTap: ()  {
+              
+              },
+            ),
           ],
         )),
         bottomNavigationBar:
@@ -398,11 +408,16 @@ class _HomePageState extends State<HomePage> {
                                     child: Opacity(
                                         opacity: 0.25,
                                         child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
                                           children: [
                                             Image.asset('assets/note.jpg',
                                                 width: 150, height: 150),
-                                            Text('Create your notes',style:TextStyle(color:Colors.white,fontWeight: FontWeight.bold,fontSize: 24))
+                                            Text('Create your notes',
+                                                style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 24))
                                           ],
                                         ))),
                                 height: 400,

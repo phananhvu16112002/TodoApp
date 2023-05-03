@@ -30,7 +30,7 @@ class _MyAppState extends State<MyApp> {
     checkLogin();
   }
 
-  void checkLogin() async {
+  void checkLogin() async {   
     String? token = await authClass.getToken();
     if (token != null) {
       setState(() {

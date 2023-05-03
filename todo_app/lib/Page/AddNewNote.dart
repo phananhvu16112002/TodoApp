@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
@@ -7,7 +9,9 @@ import 'package:intl/intl.dart';
 import 'package:todo_app/Custom/MyInputFeild.dart';
 import 'package:todo_app/Page/HomePage.dart';
 import 'package:get/get.dart';
+import 'package:file_picker/file_picker.dart';
 // import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 class AddNewNote extends StatefulWidget {
   const AddNewNote({super.key});
@@ -37,6 +41,38 @@ class _AddNewNoteState extends State<AddNewNote> {
 
   String _selectedRepeat = "None";
   List<String> repeatList = ["None", "Daily"];
+  PlatformFile? pickedFile;
+  UploadTask? uploadTask;
+  bool isCheck = false;
+  var fileNotes;
+
+  Future uploadFile() async {
+    final path = 'files/${pickedFile!.name}';
+    final file = File(pickedFile!.path!);
+
+    final ref = FirebaseStorage.instance.ref().child(path);
+    setState(() {
+      uploadTask = ref.putFile(file);
+    });
+
+    final snapshot = await uploadTask!.whenComplete(() {});
+    final urlDownload = await snapshot.ref.getDownloadURL();
+    print('Download Link: $urlDownload');
+    setState(() {
+      fileNotes = urlDownload;
+      uploadTask = null;
+    });
+  }
+
+  Future selectFile() async {
+    final results = await FilePicker.platform.pickFiles();
+    if (results == null) return;
+
+    setState(() {
+      isCheck = true;
+      pickedFile = results.files.first;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -118,6 +154,41 @@ class _AddNewNoteState extends State<AddNewNote> {
                         height: 12,
                       ),
                       noteDescription(),
+                      SizedBox(
+                        height: 25,
+                      ),
+                      label("Pick Files(Images, Videos,Audio)"),
+                      SizedBox(
+                        height: 12,
+                      ),
+                      Column(
+                        children: [
+                          if (pickedFile != null)
+                            Container(
+                                child: Image.file(
+                              File(pickedFile!.path!),
+                              width: MediaQuery.of(context).size.width,
+                              height: MediaQuery.of(context).size.height,
+                              fit: BoxFit.cover,
+                            )),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.amber),
+                                  child: const Text('Selected File'),
+                                  onPressed: selectFile),
+                              SizedBox(width: 25),
+                              ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                      backgroundColor: isCheck ? Colors.green : Colors.grey),
+                                  child: const Text('Upload File'),
+                                  onPressed: isCheck ? uploadFile : () {}),
+                            ],
+                          ),
+                        ],
+                      ),
                       SizedBox(
                         height: 25,
                       ),
@@ -353,6 +424,7 @@ class _AddNewNoteState extends State<AddNewNote> {
             "task": noteType,
             "Category": noteCategory,
             "decription": _noteDescriptionController.text,
+            "FileNotes": fileNotes.toString(),
             "DateFinish": _controllerDateTime.text,
             "TimeStart": _controllerTimeStart.text,
             "TimeFinish": _controllerTimeFinish.text,
@@ -378,12 +450,18 @@ class _AddNewNoteState extends State<AddNewNote> {
           ScaffoldMessenger.of(context)
               .showSnackBar(SnackBar(content: Text("Add Note Successfully")));
         } else if (_noteTitleController.text.isEmpty ||
-            _noteDescriptionController.text.isEmpty || _controllerTimeStart.text.isEmpty || _controllerTimeFinish.text.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("Required add Title and Description and Time Start and Finish ")));
+            _noteDescriptionController.text.isEmpty ||
+            _controllerTimeStart.text.isEmpty ||
+            _controllerTimeFinish.text.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(
+                  "Required add Title and Description and Time Start and Finish ")));
         }
       },
-      child: _noteTitleController.text.isNotEmpty && _noteDescriptionController.text.isNotEmpty && _controllerTimeStart.text.isNotEmpty && _controllerTimeFinish.text.isNotEmpty
+      child: _noteTitleController.text.isNotEmpty &&
+              _noteDescriptionController.text.isNotEmpty &&
+              _controllerTimeStart.text.isNotEmpty &&
+              _controllerTimeFinish.text.isNotEmpty
           ? Container(
               height: 56,
               width: MediaQuery.of(context).size.width,
@@ -546,7 +624,7 @@ class _AddNewNoteState extends State<AddNewNote> {
         context: context,
         initialTime: TimeOfDay(
             hour: int.parse(_finishTime.split(":")[0]),
-           minute: int.parse(_finishTime.split(":")[1].split(" ")[0])));
+            minute: int.parse(_finishTime.split(":")[1].split(" ")[0])));
     if (value != null) {
       _controllerTimeFinish.text = value.format(context);
     }

@@ -39,6 +39,7 @@ dependencies:
   firebase_core: ^2.8.0
   firebase_auth: ^4.3.0
   firebase_auth_web: ^5.2.10
+  firebase_storage: ^11.1.1
   flutter_svg: ^2.0.4
   google_sign_in: ^6.0.2
   flutter_secure_storage: ^8.0.0 # Lưu trữ và truy xuất dữ liệu trên thiết bị. Sử dụng các tính năng bảo mật của hệ điều hành. 
@@ -54,6 +55,7 @@ dependencies:
   flutter_slidable: ^3.0.0
   flutter_staggered_animations: ^1.1.1
   firebase_messaging: ^14.4.1
+  file_picker: ^5.2.11
 
   
 

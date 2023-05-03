@@ -1,4 +1,8 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -34,6 +38,38 @@ class _ViewNoteState extends State<ViewNote> {
 
   String _selectedRepeat = "None";
   List<String> repeatList = ["None", "Daily"];
+  PlatformFile? pickedFile;
+  UploadTask? uploadTask;
+  bool isCheck = false;
+  var fileNotes;
+
+  Future uploadFile() async {
+    final path = 'files/${pickedFile!.name}';
+    final file = File(pickedFile!.path!);
+
+    final ref = FirebaseStorage.instance.ref().child(path);
+    setState(() {
+      uploadTask = ref.putFile(file);
+    });
+
+    final snapshot = await uploadTask!.whenComplete(() {});
+    final urlDownload = await snapshot.ref.getDownloadURL();
+    print('Download Link: $urlDownload');
+    setState(() {
+      fileNotes = urlDownload;
+      uploadTask = null;
+    });
+  }
+
+  Future selectFile() async {
+    final results = await FilePicker.platform.pickFiles();
+    if (results == null) return;
+
+    setState(() {
+      isCheck = true;
+      pickedFile = results.files.first;
+    });
+  }
 
   @override
   void initState() {
@@ -54,6 +90,8 @@ class _ViewNoteState extends State<ViewNote> {
         TextEditingController(text: widget.document['DateFinish']);
     _selectedRemind = widget.document['Remind'];
     _selectedRepeat = widget.document['Repeat'];
+    fileNotes = widget.document['FileNotes'];
+    print(fileNotes);
   }
 
   @override
@@ -202,6 +240,36 @@ class _ViewNoteState extends State<ViewNote> {
                       noteDescription(),
                       SizedBox(
                         height: 25,
+                      ),
+                       label("Pick Files(Images, Videos,Audio)"),
+                      SizedBox(
+                        height: 12,
+                      ),
+                      Column(
+                        children: [
+                          if (widget.document['FileNotes'] != null)
+                            Container(
+                                child: Image.network(
+                              '$fileNotes',
+                              width: MediaQuery.of(context).size.width,
+                              height: MediaQuery.of(context).size.height,
+                              fit: BoxFit.cover,
+                            )  ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(backgroundColor: edit ?Colors.amber : Colors.grey),
+                                  child: const Text('Selected File'),
+                                  onPressed: edit ? selectFile : (){}),
+                              SizedBox(width: 25),
+                              ElevatedButton(
+                                  style: ElevatedButton.styleFrom(backgroundColor: edit && isCheck ?Colors.green : Colors.grey),
+                                  child: const Text('Upload File'),
+                                  onPressed: edit && isCheck ? uploadFile : (){}),
+                            ],
+                          ),
+                        ],
                       ),
                       label("Category"),
                       SizedBox(
@@ -436,6 +504,7 @@ class _ViewNoteState extends State<ViewNote> {
           "DateFinish": _controllerDateTime.text,
           "TimeStart": _controllerTimeStart.text,
           "TimeFinish": _controllerTimeFinish.text,
+          "FileNotes": fileNotes.toString(),
           "Remind": _selectedRemind,
           "Repeat": _selectedRepeat
         });
