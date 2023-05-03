@@ -48,10 +48,12 @@ dependencies:
   intl:
   google_fonts:
   date_picker_timeline:
-  flutter_local_notifications:
+  flutter_local_notifications: ^9.3.2
+  flutter_native_timezone: ^2.0.0
   get: ^4.6.5
   flutter_slidable: ^3.0.0
   flutter_staggered_animations: ^1.1.1
+  firebase_messaging: ^14.4.1
 
   
 

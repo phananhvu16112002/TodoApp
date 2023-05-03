@@ -26,7 +26,7 @@ class _AddNewNoteState extends State<AddNewNote> {
   var _controllerTimeFinish = TextEditingController();
   var noteCategory = '';
   var userID = FirebaseAuth.instance.currentUser?.uid;
-  String _endTime = "9:30 PM";
+  String _finishTime = DateFormat("hh:mm a").format(DateTime.now()).toString();
   String _startTime = DateFormat("hh:mm a").format(DateTime.now()).toString();
   int _selectedRemind = 5;
   List<int> remindList = [5, 10, 15, 20];
@@ -36,7 +36,7 @@ class _AddNewNoteState extends State<AddNewNote> {
   bool pinned = false;
 
   String _selectedRepeat = "None";
-  List<String> repeatList = ["None", "Daily", "Weekly", "Monthly"];
+  List<String> repeatList = ["None", "Daily"];
 
   @override
   Widget build(BuildContext context) {
@@ -378,12 +378,12 @@ class _AddNewNoteState extends State<AddNewNote> {
           ScaffoldMessenger.of(context)
               .showSnackBar(SnackBar(content: Text("Add Note Successfully")));
         } else if (_noteTitleController.text.isEmpty ||
-            _noteDescriptionController.text.isEmpty) {
+            _noteDescriptionController.text.isEmpty || _controllerTimeStart.text.isEmpty || _controllerTimeFinish.text.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("Required add Title and Description ")));
+              SnackBar(content: Text("Required add Title and Description and Time Start and Finish ")));
         }
       },
-      child: _noteTitleController.text.isNotEmpty
+      child: _noteTitleController.text.isNotEmpty && _noteDescriptionController.text.isNotEmpty && _controllerTimeStart.text.isNotEmpty && _controllerTimeFinish.text.isNotEmpty
           ? Container(
               height: 56,
               width: MediaQuery.of(context).size.width,
@@ -506,17 +506,47 @@ class _AddNewNoteState extends State<AddNewNote> {
     );
   }
 
+  // void _showTimePicker() async {
+  //   final TimeOfDay? selectedTime = await showTimePicker(
+  //     initialEntryMode: TimePickerEntryMode.input,
+  //     context: context,
+  //     initialTime: TimeOfDay.now(),
+  //     builder: (BuildContext context, Widget? child) {
+  //       return MediaQuery(
+  //         data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false),
+  //         child: child!,
+  //       );
+  //     },
+  //   );
+
+  //   if (selectedTime != null) {
+  //     final MaterialLocalizations localizations =
+  //         MaterialLocalizations.of(context);
+  //     final String formattedTime = localizations.formatTimeOfDay(selectedTime,
+  //         alwaysUse24HourFormat: false);
+  //     _controllerTimeStart.text = formattedTime;
+  //   }
+  // }
+
   void _showTimePicker() async {
-    var value =
-        await showTimePicker(context: context, initialTime: TimeOfDay.now());
+    var value = await showTimePicker(
+        initialEntryMode: TimePickerEntryMode.input,
+        context: context,
+        initialTime: TimeOfDay(
+            hour: int.parse(_startTime.split(":")[0]),
+            minute: int.parse(_startTime.split(":")[1].split(" ")[0])));
     if (value != null) {
       _controllerTimeStart.text = value.format(context);
     }
   }
 
   void _showTimePickerFinish() async {
-    var value =
-        await showTimePicker(context: context, initialTime: TimeOfDay.now());
+    var value = await showTimePicker(
+        initialEntryMode: TimePickerEntryMode.input,
+        context: context,
+        initialTime: TimeOfDay(
+            hour: int.parse(_finishTime.split(":")[0]),
+           minute: int.parse(_finishTime.split(":")[1].split(" ")[0])));
     if (value != null) {
       _controllerTimeFinish.text = value.format(context);
     }

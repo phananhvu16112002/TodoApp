@@ -14,7 +14,7 @@ class NoteCard extends StatelessWidget {
     required this.completed,
     required this.timeFinish,
     required this.dateFinish,
-    required this.protected,
+    required this.protected, required this.description,
   }) : super(key: key);
 
   final String title;
@@ -29,6 +29,7 @@ class NoteCard extends StatelessWidget {
   final bool protected;
   final String timeFinish;
   final String dateFinish;
+  final String description;
 
   @override
   Widget build(BuildContext context) {

@@ -26,13 +26,14 @@ class _ViewNoteState extends State<ViewNote> {
   var _controllerRemind = TextEditingController();
   var noteCategory;
   bool edit = false;
-  String _endTime = "9:30 PM";
+  String _finishTime = DateFormat("hh:mm a").format(DateTime.now()).toString();
+
   String _startTime = DateFormat("hh:mm a").format(DateTime.now()).toString();
   int _selectedRemind = 5;
   List<int> remindList = [5, 10, 15, 20];
 
   String _selectedRepeat = "None";
-  List<String> repeatList = ["None", "Daily", "Weekly", "Monthly"];
+  List<String> repeatList = ["None", "Daily"];
 
   @override
   void initState() {
@@ -386,7 +387,7 @@ class _ViewNoteState extends State<ViewNote> {
         style: TextStyle(color: Colors.white, fontSize: 17),
         decoration: InputDecoration(
             border: InputBorder.none,
-            hintText: _endTime,
+            hintText: _finishTime,
             hintStyle: TextStyle(color: Colors.grey, fontSize: 17),
             contentPadding: EdgeInsets.only(
               left: 20,
@@ -570,16 +571,24 @@ class _ViewNoteState extends State<ViewNote> {
   }
 
   void _showTimePicker() async {
-    var value =
-        await showTimePicker(context: context, initialTime: TimeOfDay.now());
+    var value = await showTimePicker(
+        initialEntryMode: TimePickerEntryMode.input,
+        context: context,
+        initialTime: TimeOfDay(
+            hour: int.parse(_startTime.split(":")[0]),
+            minute: int.parse(_startTime.split(":")[1].split(" ")[0])));
     if (value != null) {
       _controllerTimeStart.text = value.format(context);
     }
   }
 
   void _showTimePickerFinish() async {
-    var value =
-        await showTimePicker(context: context, initialTime: TimeOfDay.now());
+    var value = await showTimePicker(
+        initialEntryMode: TimePickerEntryMode.input,
+        context: context,
+        initialTime: TimeOfDay(
+            hour: int.parse(_finishTime.split(":")[0]),
+            minute: int.parse(_finishTime.split(":")[1].split(" ")[0])));
     if (value != null) {
       _controllerTimeFinish.text = value.format(context);
     }

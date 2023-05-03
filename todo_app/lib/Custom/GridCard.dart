@@ -139,7 +139,7 @@ class GridCard extends StatelessWidget {
                                               ? Colors.red
                                               : Colors.white,
                                           fontWeight: FontWeight.w600,
-                                          fontSize: 12,
+                                          fontSize: 8,
                                         )),
                                   ],
                                 ),

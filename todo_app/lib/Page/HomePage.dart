@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:todo_app/Custom/GridCard.dart';
 import 'package:todo_app/Custom/NoteCard.dart';
@@ -13,6 +14,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:date_picker_timeline/date_picker_timeline.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:todo_app/Service/notifications_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -28,103 +31,37 @@ class _HomePageState extends State<HomePage> {
   late QuerySnapshot _snapshotData;
   bool _isSearching = false;
   bool checkListView = true;
-  DateTime _selectedDate = DateTime.now();
   TextEditingController _passwordController = TextEditingController();
   TextEditingController _confirmPasswordController = TextEditingController();
   TextEditingController _unPasswordController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   late List<Map<String, dynamic>> _noteList;
   late List<Map<String, dynamic>> _allNotes;
+  DateTime _selectedDate = DateTime.now();
+  DateTime dateChoose = DateTime.now();
   late var _noteStream;
+  var notifyHelper;
 
   @override
   void initState() {
     var userID = FirebaseAuth.instance.currentUser?.uid;
-
     Stream<QuerySnapshot> _stream = FirebaseFirestore.instance
         .collection("NoteTask")
         .where("userID", isEqualTo: userID)
         .snapshots();
     _noteStream = _stream;
-
     _stream.listen((QuerySnapshot snapshot) {
       _allNotes =
           snapshot.docs.map((e) => e.data() as Map<String, dynamic>).toList();
       _noteList = _allNotes;
     });
+
+    notifyHelper = NotificationsService();
+    notifyHelper.initializeNotification();
+    notifyHelper.requestIOSPermissions();
+
     super.initState();
     getUserData();
-  }
-
-  void _searchNotes(String query) {
-    List<Map<String, dynamic>> results = [];
-    if (query.isEmpty) {
-      setState(() {
-        _isSearching = false;
-        _noteList = _allNotes;
-      });
-    } else {
-      _noteStream = FirebaseFirestore.instance
-          .collection('NoteTask')
-          .where('title', isGreaterThanOrEqualTo: query)
-          .where('title', isLessThan: query + 'z')
-          .snapshots();
-
-      _noteStream.listen((QuerySnapshot snapshot) {
-        _noteList =
-            snapshot.docs.map((e) => e.data() as Map<String, dynamic>).toList();
-        results = _noteList;
-      });
-
-      setState(() {
-        _noteList = results;
-        _isSearching = true;
-      });
-    }
-  }
-
-  Widget _buildNotesListView() {
-    return ListView.builder(
-      itemCount: _noteList.length,
-      itemBuilder: (BuildContext context, int index) {
-        Map<String, dynamic> noteData = _noteList[index];
-        var timeStart = noteData['TimeStart'].toString();
-        var timeFinish = noteData['TimeFinish'].toString();
-        return Card(
-          elevation: 4,
-          color:  Color(0xff2a2e3d),
-          child: ListTile(
-            leading: Icon(
-              Icons.note_outlined,
-              color: Colors.white,
-              size: 30,
-            ),
-            trailing: Icon(
-              Icons.arrow_circle_right,
-              color: Colors.white,
-              size: 30,
-            ),
-            title: Text(
-              noteData['title'].toString(),
-              style: TextStyle(color: Colors.white),
-            ),
-            subtitle: Text(
-              "$timeStart -  $timeFinish",
-              style: TextStyle(color: Colors.white),
-            ),
-            onTap: () {
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => ViewNote(
-                            document: noteData,
-                            id: index.toString(),
-                          )));
-            },
-          ),
-        );
-      },
-    );
   }
 
   @override
@@ -133,6 +70,7 @@ class _HomePageState extends State<HomePage> {
     String? userEmail = FirebaseAuth.instance.currentUser?.email;
     String? userName = FirebaseAuth.instance.currentUser?.displayName;
     String? userPhone = FirebaseAuth.instance.currentUser?.phoneNumber;
+
     bool completed = false;
     List<Map<String, dynamic>> pinnedNotes = [];
     Stream<QuerySnapshot> _stream = FirebaseFirestore.instance
@@ -173,8 +111,6 @@ class _HomePageState extends State<HomePage> {
                       hintStyle: TextStyle(color: Colors.white)),
                   onChanged: _searchNotes,
                 )
-              // _buildNotesListView()
-
               : Text("Today's Schedule",
                   style: TextStyle(
                       fontSize: 34,
@@ -392,7 +328,11 @@ class _HomePageState extends State<HomePage> {
               label: 'Add Note'),
           BottomNavigationBarItem(
               icon: InkWell(
-                  onTap: () {},
+                  onTap: () {
+                    notifyHelper.displayNotification(
+                        title: "Theme Changed", body: "Go add");
+                    // notifyHelper.scheduledNotification();
+                  },
                   child: Icon(Icons.settings, size: 32, color: Colors.white)),
               label: 'Settings'),
         ]),
@@ -418,108 +358,529 @@ class _HomePageState extends State<HomePage> {
                           height: 15,
                         ),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 22),
-                          child: Column(
-                            children: [
-                              _addDateBar(),
-                              SizedBox(
-                                height: 10,
-                              ),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    "All Notes",
-                                    style: TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 22),
+                            child: Column(
+                              children: [
+                                _addDateBar(),
+                                SizedBox(
+                                  height: 10,
+                                ),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      "All Notes",
+                                      style: TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
                                     ),
-                                  ),
-                                  Text(
-                                    "${docs.length}",
-                                    style: TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
+                                    Text(
+                                      "${docs.length}",
+                                      style: TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  ],
+                                ),
+                              ],
+                            )),
                         SizedBox(
-                          height: 15,
+                          height: 20,
                         ),
-                        Expanded(
-                          child: StreamBuilder<QuerySnapshot>(
-                            stream: _stream,
-                            builder: (BuildContext context,
-                                AsyncSnapshot<QuerySnapshot> snapshot) {
-                              if (snapshot.hasError) {
-                                return Center(
-                                    child: Text('Error: ${snapshot.error}'));
-                              }
-                              if (snapshot.connectionState ==
-                                  ConnectionState.waiting) {
-                                return Center(
-                                    child: CircularProgressIndicator());
-                              }
+                        docs.length == 0
+                            ? Container(
+                                child: Center(
+                                    child: Opacity(
+                                        opacity: 0.25,
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Image.asset('assets/note.jpg',
+                                                width: 150, height: 150),
+                                            Text('Create your notes',style:TextStyle(color:Colors.white,fontWeight: FontWeight.bold,fontSize: 24))
+                                          ],
+                                        ))),
+                                height: 400,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(20),
+                                  color: Colors.black87,
+                                ),
+                              )
+                            : Expanded(
+                                child: StreamBuilder<QuerySnapshot>(
+                                  stream: _stream,
+                                  builder: (BuildContext context,
+                                      AsyncSnapshot<QuerySnapshot> snapshot) {
+                                    if (snapshot.hasError) {
+                                      return Center(
+                                          child:
+                                              Text('Error: ${snapshot.error}'));
+                                    }
+                                    if (snapshot.connectionState ==
+                                        ConnectionState.waiting) {
+                                      return Center(
+                                          child: CircularProgressIndicator());
+                                    }
+                                    return checkListView
+                                        ? ListView.builder(
+                                            itemCount:
+                                                snapshot.data!.docs.length,
+                                            itemBuilder: (context, index) {
+                                              IconData iconData;
+                                              Color iconColor;
+                                              Map<String, dynamic> document =
+                                                  snapshot.data!.docs[index]
+                                                          .data()
+                                                      as Map<String, dynamic>;
 
-                              return checkListView
-                                  ? ListView.builder(
-                                      itemCount: snapshot.data!.docs.length,
-                                      itemBuilder: (context, index) {
-                                        IconData iconData;
-                                        Color iconColor;
-                                        Map<String, dynamic> document =
-                                            snapshot.data!.docs[index].data()
-                                                as Map<String, dynamic>;
+                                              for (int i = 0;
+                                                  i <
+                                                      snapshot
+                                                          .data!.docs.length;
+                                                  i++) {
+                                                var currentDocument =
+                                                    snapshot.data!.docs[i];
+                                                Map<String, dynamic>
+                                                    currentDocumentData =
+                                                    currentDocument.data()
+                                                        as Map<String, dynamic>;
+                                                if (currentDocumentData !=
+                                                    null) {
+                                                  if (currentDocumentData[
+                                                          'Repeat'] ==
+                                                      'Daily') {
+                                                    notifyHelper.scheduledNotification(
+                                                        int.parse(
+                                                            currentDocumentData[
+                                                                    'TimeStart']
+                                                                .toString()
+                                                                .split(":")[0]),
+                                                        int.parse(
+                                                            currentDocumentData[
+                                                                    'TimeStart']
+                                                                .toString()
+                                                                .split(":")[1]),
+                                                        currentDocumentData);
+                                                  }
+                                                }
+                                              }
 
-                                        switch (document['Category']) {
-                                          case "Work":
-                                            iconData =
-                                                Icons.run_circle_outlined;
-                                            iconColor = Colors.red;
-                                            break;
-                                          case "WorkOut":
-                                            iconData = Icons.alarm;
-                                            iconColor = Colors.teal;
-                                            break;
-                                          case "Food":
-                                            iconData = Icons.food_bank;
-                                            iconColor = Colors.green;
-                                            break;
-                                          case "Design":
-                                            iconData =
-                                                Icons.design_services_outlined;
-                                            iconColor = Colors.teal;
-                                            break;
-                                          case "Run":
-                                            iconData = Icons.sports_esports;
-                                            iconColor = Color.fromARGB(
-                                                255, 199, 228, 36);
-                                            break;
-                                          default:
-                                            iconData =
-                                                Icons.run_circle_outlined;
-                                            iconColor = Colors.red;
-                                        }
-                                        selected.add(Select(
-                                            snapshot.data!.docs[index].id,
-                                            false));
-                                        return GestureDetector(
-                                            onTap: document['Completed'] ||
-                                                    document['Protected']
-                                                ? () {}
-                                                : () {
-                                                    Navigator.push(
-                                                        context,
-                                                        MaterialPageRoute(
-                                                            builder: (builder) =>
-                                                                ViewNote(
+                                              switch (document['Category']) {
+                                                case "Work":
+                                                  iconData =
+                                                      Icons.run_circle_outlined;
+                                                  iconColor = Colors.red;
+                                                  break;
+                                                case "WorkOut":
+                                                  iconData = Icons.alarm;
+                                                  iconColor = Colors.teal;
+                                                  break;
+                                                case "Food":
+                                                  iconData = Icons.food_bank;
+                                                  iconColor = Colors.green;
+                                                  break;
+                                                case "Design":
+                                                  iconData = Icons
+                                                      .design_services_outlined;
+                                                  iconColor = Colors.teal;
+                                                  break;
+                                                case "Run":
+                                                  iconData =
+                                                      Icons.sports_esports;
+                                                  iconColor = Color.fromARGB(
+                                                      255, 199, 228, 36);
+                                                  break;
+                                                default:
+                                                  iconData =
+                                                      Icons.run_circle_outlined;
+                                                  iconColor = Colors.red;
+                                              }
+                                              selected.add(Select(
+                                                  snapshot.data!.docs[index].id,
+                                                  false));
+                                              return GestureDetector(
+                                                  onTap:
+                                                      document['Completed'] ||
+                                                              document[
+                                                                  'Protected']
+                                                          ? () {}
+                                                          : () {
+                                                              Navigator.push(
+                                                                  context,
+                                                                  MaterialPageRoute(
+                                                                      builder: (builder) => ViewNote(
+                                                                          document:
+                                                                              document,
+                                                                          id: snapshot
+                                                                              .data!
+                                                                              .docs[index]
+                                                                              .id)));
+                                                            },
+                                                  child: Slidable(
+                                                    key: const ValueKey(0),
+                                                    endActionPane: ActionPane(
+                                                        motion: ScrollMotion(),
+                                                        children: [
+                                                          SlidableAction(
+                                                            onPressed:
+                                                                (context) {
+                                                              showDialog(
+                                                                  context:
+                                                                      context,
+                                                                  builder:
+                                                                      (BuildContext
+                                                                          context) {
+                                                                    return AlertDialog(
+                                                                      title: Text(
+                                                                          "Delete Note ?"),
+                                                                      content: Text(
+                                                                          "Are you sure you want to delete this note ?"),
+                                                                      actions: [
+                                                                        TextButton(
+                                                                            onPressed:
+                                                                                () {
+                                                                              Navigator.of(context).pop();
+                                                                            },
+                                                                            child:
+                                                                                Text("Cancel")),
+                                                                        TextButton(
+                                                                            onPressed:
+                                                                                () {
+                                                                              String id = snapshot.data!.docs[index].id;
+                                                                              FirebaseFirestore.instance.collection('NoteTask').doc(id).delete();
+                                                                              Navigator.push(context, MaterialPageRoute(builder: (builder) => HomePage()));
+                                                                              ;
+                                                                            },
+                                                                            child:
+                                                                                Text('Delete'))
+                                                                      ],
+                                                                    );
+                                                                  });
+                                                            },
+                                                            backgroundColor:
+                                                                Color(
+                                                                    0xFFFE4A49),
+                                                            foregroundColor:
+                                                                Colors.white,
+                                                            icon: Icons.delete,
+                                                            label: 'Delete',
+                                                          ),
+                                                          document['Completed']
+                                                              ? SlidableAction(
+                                                                  onPressed:
+                                                                      (context) {
+                                                                    String id =
+                                                                        snapshot
+                                                                            .data!
+                                                                            .docs[index]
+                                                                            .id;
+                                                                    FirebaseFirestore
+                                                                        .instance
+                                                                        .collection(
+                                                                            "NoteTask")
+                                                                        .doc(id)
+                                                                        .update({
+                                                                      'Completed':
+                                                                          false,
+                                                                    });
+                                                                  },
+                                                                  backgroundColor:
+                                                                      Color.fromARGB(
+                                                                          255,
+                                                                          202,
+                                                                          35,
+                                                                          199),
+                                                                  foregroundColor:
+                                                                      Colors
+                                                                          .white,
+                                                                  icon: Icons
+                                                                      .cancel,
+                                                                  label:
+                                                                      'UnComplete',
+                                                                )
+                                                              : SlidableAction(
+                                                                  onPressed:
+                                                                      (context) {
+                                                                    String id =
+                                                                        snapshot
+                                                                            .data!
+                                                                            .docs[index]
+                                                                            .id;
+                                                                    FirebaseFirestore
+                                                                        .instance
+                                                                        .collection(
+                                                                            "NoteTask")
+                                                                        .doc(id)
+                                                                        .update({
+                                                                      'Completed':
+                                                                          true,
+                                                                    });
+                                                                  },
+                                                                  backgroundColor:
+                                                                      Color.fromARGB(
+                                                                          255,
+                                                                          44,
+                                                                          137,
+                                                                          190),
+                                                                  foregroundColor:
+                                                                      Colors
+                                                                          .white,
+                                                                  icon: Icons
+                                                                      .check,
+                                                                  label:
+                                                                      'Completed',
+                                                                ),
+                                                          // SlidableAction(
+                                                          //   onPressed: (context) {},
+                                                          //   backgroundColor: Color.fromARGB(
+                                                          //       255, 218, 35, 35),
+                                                          //   foregroundColor: Colors.white,
+                                                          //   icon: Icons.push_pin_outlined,
+                                                          //   label: 'Pin',
+                                                          // ),
+                                                          document['Protected']
+                                                              ? SlidableAction(
+                                                                  onPressed:
+                                                                      (context) {
+                                                                    showDialog(
+                                                                      context:
+                                                                          context,
+                                                                      builder:
+                                                                          (BuildContext
+                                                                              context) {
+                                                                        return AlertDialog(
+                                                                          title:
+                                                                              Text('Protected password'),
+                                                                          content:
+                                                                              Column(
+                                                                            mainAxisSize:
+                                                                                MainAxisSize.min,
+                                                                            children: [
+                                                                              TextFormField(
+                                                                                controller: _unPasswordController,
+                                                                                obscureText: true,
+                                                                                decoration: InputDecoration(labelText: "Enter Password", labelStyle: TextStyle(fontSize: 15, color: Color.fromARGB(255, 33, 31, 31)), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(width: 1.5, color: Color.fromARGB(255, 241, 159, 108))), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(width: 1, color: Colors.grey)), hintText: 'Enter password'),
+                                                                              ),
+                                                                            ],
+                                                                          ),
+                                                                          actions: [
+                                                                            TextButton(
+                                                                              onPressed: () => Navigator.pop(context),
+                                                                              child: Text('Cancel'),
+                                                                            ),
+                                                                            TextButton(
+                                                                              onPressed: () {
+                                                                                if (_unPasswordController.text.trim() == document['Password']) {
+                                                                                  String id = snapshot.data!.docs[index].id;
+                                                                                  FirebaseFirestore.instance.collection('NoteTask').doc(id).update({
+                                                                                    'Protected': false,
+                                                                                    'Password': '',
+                                                                                  });
+                                                                                  Navigator.pop(context);
+                                                                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Unlock successfully")));
+                                                                                } else {
+                                                                                  setState(() {
+                                                                                    _unPasswordController.text = '';
+                                                                                  });
+                                                                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Password is wrong! Please check!")));
+                                                                                }
+                                                                                setState(() {
+                                                                                  _passwordController.text = '';
+                                                                                  _confirmPasswordController.text = '';
+                                                                                });
+                                                                              },
+                                                                              child: Text('Unlock'),
+                                                                            ),
+                                                                          ],
+                                                                        );
+                                                                      },
+                                                                    );
+                                                                  },
+                                                                  backgroundColor:
+                                                                      Color.fromARGB(
+                                                                          255,
+                                                                          48,
+                                                                          48,
+                                                                          176),
+                                                                  foregroundColor:
+                                                                      Colors
+                                                                          .white,
+                                                                  icon: Icons
+                                                                      .lock_clock_rounded,
+                                                                  label:
+                                                                      'UnProtect',
+                                                                )
+                                                              : SlidableAction(
+                                                                  onPressed:
+                                                                      (context) {
+                                                                    showDialog(
+                                                                      context:
+                                                                          context,
+                                                                      builder:
+                                                                          (BuildContext
+                                                                              context) {
+                                                                        return AlertDialog(
+                                                                          title:
+                                                                              Text('Set password'),
+                                                                          content:
+                                                                              Column(
+                                                                            mainAxisSize:
+                                                                                MainAxisSize.min,
+                                                                            children: [
+                                                                              TextFormField(
+                                                                                controller: _passwordController,
+                                                                                obscureText: true,
+                                                                                decoration: InputDecoration(labelText: "Enter Password", labelStyle: TextStyle(fontSize: 15, color: Color.fromARGB(255, 33, 31, 31)), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(width: 1.5, color: Color.fromARGB(255, 241, 159, 108))), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(width: 1, color: Colors.grey)), hintText: 'Enter password'),
+                                                                              ),
+                                                                              SizedBox(
+                                                                                height: 10,
+                                                                              ),
+                                                                              TextFormField(
+                                                                                controller: _confirmPasswordController,
+                                                                                obscureText: true,
+                                                                                decoration: InputDecoration(labelText: "Confirm Password", labelStyle: TextStyle(fontSize: 15, color: Color.fromARGB(255, 33, 31, 31)), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(width: 1.5, color: Color.fromARGB(255, 241, 159, 108))), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(width: 1, color: Colors.grey)), hintText: 'Confirm Password'),
+                                                                              ),
+                                                                            ],
+                                                                          ),
+                                                                          actions: [
+                                                                            TextButton(
+                                                                              onPressed: () => Navigator.pop(context),
+                                                                              child: Text('Cancel'),
+                                                                            ),
+                                                                            TextButton(
+                                                                              onPressed: () {
+                                                                                if (_passwordController.text.trim() == _confirmPasswordController.text.trim()) {
+                                                                                  String id = snapshot.data!.docs[index].id;
+                                                                                  String password = _passwordController.text.trim();
+                                                                                  FirebaseFirestore.instance.collection('NoteTask').doc(id).update({
+                                                                                    'Protected': true,
+                                                                                    'Password': password,
+                                                                                  });
+                                                                                  Navigator.pop(context);
+                                                                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Lock successfully")));
+                                                                                } else {
+                                                                                  setState(() {
+                                                                                    _confirmPasswordController.text = '';
+                                                                                    _passwordController.text = '';
+                                                                                  });
+                                                                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Password is wrong! Please check your password")));
+                                                                                }
+                                                                                setState(() {
+                                                                                  _unPasswordController.text = '';
+                                                                                });
+                                                                              },
+                                                                              child: Text('Set'),
+                                                                            ),
+                                                                          ],
+                                                                        );
+                                                                      },
+                                                                    );
+                                                                  },
+                                                                  backgroundColor:
+                                                                      Color.fromARGB(
+                                                                          255,
+                                                                          107,
+                                                                          203,
+                                                                          12),
+                                                                  foregroundColor:
+                                                                      Colors
+                                                                          .white,
+                                                                  icon: Icons
+                                                                      .lock,
+                                                                  label:
+                                                                      'Protect',
+                                                                )
+                                                        ]),
+                                                    child: NoteCard(
+                                                      title: document[
+                                                                  'title'] ==
+                                                              null
+                                                          ? "Hey There"
+                                                          : document['title'],
+                                                      iconData: iconData,
+                                                      colorIcon: iconColor,
+                                                      timeStart:
+                                                          document['TimeStart'],
+                                                      check: selected[index]
+                                                          .checkValue,
+                                                      iconBGColor: Colors.white,
+                                                      index: index,
+                                                      onChanged: onChange,
+                                                      completed:
+                                                          document['Completed'],
+                                                      timeFinish: document[
+                                                          'TimeFinish'],
+                                                      dateFinish: document[
+                                                          'DateFinish'],
+                                                      protected:
+                                                          document['Protected'],
+                                                      description: document[
+                                                          'decription'],
+                                                    ),
+                                                  ));
+                                            })
+                                        : GridView.builder(
+                                            gridDelegate:
+                                                SliverGridDelegateWithFixedCrossAxisCount(
+                                              crossAxisCount:
+                                                  2, // Số cột trong lưới
+                                            ),
+                                            itemCount:
+                                                snapshot.data!.docs.length,
+                                            itemBuilder: (context, index) {
+                                              IconData iconData;
+                                              Color iconColor;
+                                              Map<String, dynamic> document =
+                                                  snapshot.data!.docs[index]
+                                                          .data()
+                                                      as Map<String, dynamic>;
+                                              switch (document['Category']) {
+                                                case "Work":
+                                                  iconData =
+                                                      Icons.run_circle_outlined;
+                                                  iconColor = Colors.red;
+                                                  break;
+                                                case "WorkOut":
+                                                  iconData = Icons.alarm;
+                                                  iconColor = Colors.teal;
+                                                  break;
+                                                case "Food":
+                                                  iconData = Icons.food_bank;
+                                                  iconColor = Colors.green;
+                                                  break;
+                                                case "Design":
+                                                  iconData = Icons
+                                                      .design_services_outlined;
+                                                  iconColor = Colors.teal;
+                                                  break;
+                                                case "Run":
+                                                  iconData =
+                                                      Icons.sports_esports;
+                                                  iconColor = Color.fromARGB(
+                                                      255, 199, 228, 36);
+                                                  break;
+                                                default:
+                                                  iconData =
+                                                      Icons.run_circle_outlined;
+                                                  iconColor = Colors.red;
+                                              }
+                                              selected.add(Select(
+                                                  snapshot.data!.docs[index].id,
+                                                  false));
+                                              return InkWell(
+                                                onTap: document['Completed'] ||
+                                                        document['Protected']
+                                                    ? () {}
+                                                    : () {
+                                                        Navigator.push(
+                                                            context,
+                                                            MaterialPageRoute(
+                                                                builder: (builder) => ViewNote(
                                                                     document:
                                                                         document,
                                                                     id: snapshot
@@ -527,785 +888,362 @@ class _HomePageState extends State<HomePage> {
                                                                         .docs[
                                                                             index]
                                                                         .id)));
-                                                  },
-                                            child: Slidable(
-                                              key: const ValueKey(0),
-                                              endActionPane: ActionPane(
-                                                  motion: ScrollMotion(),
-                                                  children: [
-                                                    SlidableAction(
-                                                      onPressed: (context) {
-                                                        showDialog(
-                                                            context: context,
-                                                            builder:
-                                                                (BuildContext
-                                                                    context) {
-                                                              return AlertDialog(
-                                                                title: Text(
-                                                                    "Delete Note ?"),
-                                                                content: Text(
-                                                                    "Are you sure you want to delete this note ?"),
-                                                                actions: [
-                                                                  TextButton(
-                                                                      onPressed:
-                                                                          () {
-                                                                        Navigator.of(context)
-                                                                            .pop();
-                                                                      },
-                                                                      child: Text(
-                                                                          "Cancel")),
-                                                                  TextButton(
-                                                                      onPressed:
-                                                                          () {
-                                                                        String id = snapshot
+                                                      },
+                                                child: Slidable(
+                                                    key: const ValueKey(0),
+                                                    endActionPane: ActionPane(
+                                                        motion: ScrollMotion(),
+                                                        children: [
+                                                          SlidableAction(
+                                                            onPressed:
+                                                                (context) {
+                                                              showDialog(
+                                                                  context:
+                                                                      context,
+                                                                  builder:
+                                                                      (BuildContext
+                                                                          context) {
+                                                                    return AlertDialog(
+                                                                      title: Text(
+                                                                          "Delete Note ?"),
+                                                                      content: Text(
+                                                                          "Are you sure you want to delete this note ?"),
+                                                                      actions: [
+                                                                        TextButton(
+                                                                            onPressed:
+                                                                                () {
+                                                                              Navigator.of(context).pop();
+                                                                            },
+                                                                            child:
+                                                                                Text("Cancel")),
+                                                                        TextButton(
+                                                                            onPressed:
+                                                                                () {
+                                                                              String id = snapshot.data!.docs[index].id;
+                                                                              FirebaseFirestore.instance.collection('NoteTask').doc(id).delete();
+                                                                              Navigator.push(context, MaterialPageRoute(builder: (builder) => HomePage()));
+                                                                              ;
+                                                                            },
+                                                                            child:
+                                                                                Text('Delete'))
+                                                                      ],
+                                                                    );
+                                                                  });
+                                                            },
+                                                            backgroundColor:
+                                                                Color(
+                                                                    0xFFFE4A49),
+                                                            foregroundColor:
+                                                                Colors.white,
+                                                            icon: Icons.delete,
+                                                            label: 'Delete',
+                                                          ),
+                                                          document['Completed']
+                                                              ? SlidableAction(
+                                                                  onPressed:
+                                                                      (context) {
+                                                                    String id =
+                                                                        snapshot
                                                                             .data!
                                                                             .docs[index]
                                                                             .id;
-                                                                        FirebaseFirestore
-                                                                            .instance
-                                                                            .collection('NoteTask')
-                                                                            .doc(id)
-                                                                            .delete();
-                                                                        Navigator.push(
-                                                                            context,
-                                                                            MaterialPageRoute(builder: (builder) => HomePage()));
-                                                                        ;
-                                                                      },
-                                                                      child: Text(
-                                                                          'Delete'))
-                                                                ],
-                                                              );
-                                                            });
-                                                      },
-                                                      backgroundColor:
-                                                          Color(0xFFFE4A49),
-                                                      foregroundColor:
-                                                          Colors.white,
-                                                      icon: Icons.delete,
-                                                      label: 'Delete',
-                                                    ),
-                                                    document['Completed']
-                                                        ? SlidableAction(
-                                                            onPressed:
-                                                                (context) {
-                                                              String id =
-                                                                  snapshot
-                                                                      .data!
-                                                                      .docs[
-                                                                          index]
-                                                                      .id;
-                                                              FirebaseFirestore
-                                                                  .instance
-                                                                  .collection(
-                                                                      "NoteTask")
-                                                                  .doc(id)
-                                                                  .update({
-                                                                'Completed':
-                                                                    false,
-                                                              });
-                                                            },
-                                                            backgroundColor:
-                                                                Color.fromARGB(
-                                                                    255,
-                                                                    202,
-                                                                    35,
-                                                                    199),
-                                                            foregroundColor:
-                                                                Colors.white,
-                                                            icon: Icons.cancel,
-                                                            label: 'UnComplete',
-                                                          )
-                                                        : SlidableAction(
-                                                            onPressed:
-                                                                (context) {
-                                                              String id =
-                                                                  snapshot
-                                                                      .data!
-                                                                      .docs[
-                                                                          index]
-                                                                      .id;
-                                                              FirebaseFirestore
-                                                                  .instance
-                                                                  .collection(
-                                                                      "NoteTask")
-                                                                  .doc(id)
-                                                                  .update({
-                                                                'Completed':
-                                                                    true,
-                                                              });
-                                                            },
-                                                            backgroundColor:
-                                                                Color.fromARGB(
-                                                                    255,
-                                                                    44,
-                                                                    137,
-                                                                    190),
-                                                            foregroundColor:
-                                                                Colors.white,
-                                                            icon: Icons.check,
-                                                            label: 'Completed',
-                                                          ),
-                                                    // SlidableAction(
-                                                    //   onPressed: (context) {},
-                                                    //   backgroundColor: Color.fromARGB(
-                                                    //       255, 218, 35, 35),
-                                                    //   foregroundColor: Colors.white,
-                                                    //   icon: Icons.push_pin_outlined,
-                                                    //   label: 'Pin',
-                                                    // ),
-                                                    document['Protected']
-                                                        ? SlidableAction(
-                                                            onPressed:
-                                                                (context) {
-                                                              showDialog(
-                                                                context:
-                                                                    context,
-                                                                builder:
-                                                                    (BuildContext
-                                                                        context) {
-                                                                  return AlertDialog(
-                                                                    title: Text(
-                                                                        'Protected password'),
-                                                                    content:
-                                                                        Column(
-                                                                      mainAxisSize:
-                                                                          MainAxisSize
-                                                                              .min,
-                                                                      children: [
-                                                                        TextFormField(
-                                                                          controller:
-                                                                              _unPasswordController,
-                                                                          obscureText:
-                                                                              true,
-                                                                          decoration: InputDecoration(
-                                                                              labelText: "Enter Password",
-                                                                              labelStyle: TextStyle(fontSize: 15, color: Color.fromARGB(255, 33, 31, 31)),
-                                                                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(width: 1.5, color: Color.fromARGB(255, 241, 159, 108))),
-                                                                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(width: 1, color: Colors.grey)),
-                                                                              hintText: 'Enter password'),
-                                                                        ),
-                                                                      ],
-                                                                    ),
-                                                                    actions: [
-                                                                      TextButton(
-                                                                        onPressed:
-                                                                            () =>
-                                                                                Navigator.pop(context),
-                                                                        child: Text(
-                                                                            'Cancel'),
-                                                                      ),
-                                                                      TextButton(
-                                                                        onPressed:
-                                                                            () {
-                                                                          if (_unPasswordController.text.trim() ==
-                                                                              document['Password']) {
-                                                                            String
-                                                                                id =
-                                                                                snapshot.data!.docs[index].id;
-                                                                            FirebaseFirestore.instance.collection('NoteTask').doc(id).update({
-                                                                              'Protected': false,
-                                                                              'Password': '',
-                                                                            });
-                                                                            Navigator.pop(context);
-                                                                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Unlock successfully")));
-                                                                          } else {
-                                                                            setState(() {
-                                                                              _unPasswordController.text = '';
-                                                                            });
-                                                                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Password is wrong! Please check!")));
-                                                                          }
-                                                                          setState(
-                                                                              () {
-                                                                            _passwordController.text =
-                                                                                '';
-                                                                            _confirmPasswordController.text =
-                                                                                '';
-                                                                          });
-                                                                        },
-                                                                        child: Text(
-                                                                            'Unlock'),
-                                                                      ),
-                                                                    ],
-                                                                  );
-                                                                },
-                                                              );
-                                                            },
-                                                            backgroundColor:
-                                                                Color.fromARGB(
-                                                                    255,
-                                                                    48,
-                                                                    48,
-                                                                    176),
-                                                            foregroundColor:
-                                                                Colors.white,
-                                                            icon: Icons
-                                                                .lock_clock_rounded,
-                                                            label: 'UnProtect',
-                                                          )
-                                                        : SlidableAction(
-                                                            onPressed:
-                                                                (context) {
-                                                              showDialog(
-                                                                context:
-                                                                    context,
-                                                                builder:
-                                                                    (BuildContext
-                                                                        context) {
-                                                                  return AlertDialog(
-                                                                    title: Text(
-                                                                        'Set password'),
-                                                                    content:
-                                                                        Column(
-                                                                      mainAxisSize:
-                                                                          MainAxisSize
-                                                                              .min,
-                                                                      children: [
-                                                                        TextFormField(
-                                                                          controller:
-                                                                              _passwordController,
-                                                                          obscureText:
-                                                                              true,
-                                                                          decoration: InputDecoration(
-                                                                              labelText: "Enter Password",
-                                                                              labelStyle: TextStyle(fontSize: 15, color: Color.fromARGB(255, 33, 31, 31)),
-                                                                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(width: 1.5, color: Color.fromARGB(255, 241, 159, 108))),
-                                                                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(width: 1, color: Colors.grey)),
-                                                                              hintText: 'Enter password'),
-                                                                        ),
-                                                                        SizedBox(
-                                                                          height:
-                                                                              10,
-                                                                        ),
-                                                                        TextFormField(
-                                                                          controller:
-                                                                              _confirmPasswordController,
-                                                                          obscureText:
-                                                                              true,
-                                                                          decoration: InputDecoration(
-                                                                              labelText: "Confirm Password",
-                                                                              labelStyle: TextStyle(fontSize: 15, color: Color.fromARGB(255, 33, 31, 31)),
-                                                                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(width: 1.5, color: Color.fromARGB(255, 241, 159, 108))),
-                                                                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(width: 1, color: Colors.grey)),
-                                                                              hintText: 'Confirm Password'),
-                                                                        ),
-                                                                      ],
-                                                                    ),
-                                                                    actions: [
-                                                                      TextButton(
-                                                                        onPressed:
-                                                                            () =>
-                                                                                Navigator.pop(context),
-                                                                        child: Text(
-                                                                            'Cancel'),
-                                                                      ),
-                                                                      TextButton(
-                                                                        onPressed:
-                                                                            () {
-                                                                          if (_passwordController.text.trim() ==
-                                                                              _confirmPasswordController.text.trim()) {
-                                                                            String
-                                                                                id =
-                                                                                snapshot.data!.docs[index].id;
-                                                                            String
-                                                                                password =
-                                                                                _passwordController.text.trim();
-                                                                            FirebaseFirestore.instance.collection('NoteTask').doc(id).update({
-                                                                              'Protected': true,
-                                                                              'Password': password,
-                                                                            });
-                                                                            Navigator.pop(context);
-                                                                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Lock successfully")));
-                                                                          } else {
-                                                                            setState(() {
-                                                                              _confirmPasswordController.text = '';
-                                                                              _passwordController.text = '';
-                                                                            });
-                                                                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Password is wrong! Please check your password")));
-                                                                          }
-                                                                          setState(
-                                                                              () {
-                                                                            _unPasswordController.text =
-                                                                                '';
-                                                                          });
-                                                                        },
-                                                                        child: Text(
-                                                                            'Set'),
-                                                                      ),
-                                                                    ],
-                                                                  );
-                                                                },
-                                                              );
-                                                            },
-                                                            backgroundColor:
-                                                                Color.fromARGB(
-                                                                    255,
-                                                                    107,
-                                                                    203,
-                                                                    12),
-                                                            foregroundColor:
-                                                                Colors.white,
-                                                            icon: Icons.lock,
-                                                            label: 'Protect',
-                                                          )
-                                                  ]),
-                                              child: NoteCard(
-                                                title: document['title'] == null
-                                                    ? "Hey There"
-                                                    : document['title'],
-                                                iconData: iconData,
-                                                colorIcon: iconColor,
-                                                timeStart:
-                                                    document['TimeStart'],
-                                                check:
-                                                    selected[index].checkValue,
-                                                iconBGColor: Colors.white,
-                                                index: index,
-                                                onChanged: onChange,
-                                                completed:
-                                                    document['Completed'],
-                                                timeFinish:
-                                                    document['TimeFinish'],
-                                                dateFinish:
-                                                    document['DateFinish'],
-                                                protected:
-                                                    document['Protected'],
-                                              ),
-                                            ));
-                                      })
-                                  : GridView.builder(
-                                      gridDelegate:
-                                          SliverGridDelegateWithFixedCrossAxisCount(
-                                        crossAxisCount: 2, // Số cột trong lưới
-                                      ),
-                                      itemCount: snapshot.data!.docs.length,
-                                      itemBuilder: (context, index) {
-                                        IconData iconData;
-                                        Color iconColor;
-                                        Map<String, dynamic> document =
-                                            snapshot.data!.docs[index].data()
-                                                as Map<String, dynamic>;
-                                        switch (document['Category']) {
-                                          case "Work":
-                                            iconData =
-                                                Icons.run_circle_outlined;
-                                            iconColor = Colors.red;
-                                            break;
-                                          case "WorkOut":
-                                            iconData = Icons.alarm;
-                                            iconColor = Colors.teal;
-                                            break;
-                                          case "Food":
-                                            iconData = Icons.food_bank;
-                                            iconColor = Colors.green;
-                                            break;
-                                          case "Design":
-                                            iconData =
-                                                Icons.design_services_outlined;
-                                            iconColor = Colors.teal;
-                                            break;
-                                          case "Run":
-                                            iconData = Icons.sports_esports;
-                                            iconColor = Color.fromARGB(
-                                                255, 199, 228, 36);
-                                            break;
-                                          default:
-                                            iconData =
-                                                Icons.run_circle_outlined;
-                                            iconColor = Colors.red;
-                                        }
-                                        selected.add(Select(
-                                            snapshot.data!.docs[index].id,
-                                            false));
-                                        return InkWell(
-                                          onTap: document['Completed'] ||
-                                                  document['Protected']
-                                              ? () {}
-                                              : () {
-                                                  Navigator.push(
-                                                      context,
-                                                      MaterialPageRoute(
-                                                          builder: (builder) =>
-                                                              ViewNote(
-                                                                  document:
-                                                                      document,
-                                                                  id: snapshot
-                                                                      .data!
-                                                                      .docs[
-                                                                          index]
-                                                                      .id)));
-                                                },
-                                          child: Slidable(
-                                              key: const ValueKey(0),
-                                              endActionPane: ActionPane(
-                                                  motion: ScrollMotion(),
-                                                  children: [
-                                                    SlidableAction(
-                                                      onPressed: (context) {
-                                                        showDialog(
-                                                            context: context,
-                                                            builder:
-                                                                (BuildContext
-                                                                    context) {
-                                                              return AlertDialog(
-                                                                title: Text(
-                                                                    "Delete Note ?"),
-                                                                content: Text(
-                                                                    "Are you sure you want to delete this note ?"),
-                                                                actions: [
-                                                                  TextButton(
-                                                                      onPressed:
-                                                                          () {
-                                                                        Navigator.of(context)
-                                                                            .pop();
-                                                                      },
-                                                                      child: Text(
-                                                                          "Cancel")),
-                                                                  TextButton(
-                                                                      onPressed:
-                                                                          () {
-                                                                        String id = snapshot
+                                                                    FirebaseFirestore
+                                                                        .instance
+                                                                        .collection(
+                                                                            "NoteTask")
+                                                                        .doc(id)
+                                                                        .update({
+                                                                      'Completed':
+                                                                          false,
+                                                                    });
+                                                                  },
+                                                                  backgroundColor:
+                                                                      Color.fromARGB(
+                                                                          255,
+                                                                          202,
+                                                                          35,
+                                                                          199),
+                                                                  foregroundColor:
+                                                                      Colors
+                                                                          .white,
+                                                                  icon: Icons
+                                                                      .cancel,
+                                                                  label:
+                                                                      'UnComplete',
+                                                                )
+                                                              : SlidableAction(
+                                                                  onPressed:
+                                                                      (context) {
+                                                                    String id =
+                                                                        snapshot
                                                                             .data!
                                                                             .docs[index]
                                                                             .id;
-                                                                        FirebaseFirestore
-                                                                            .instance
-                                                                            .collection('NoteTask')
-                                                                            .doc(id)
-                                                                            .delete();
-                                                                        Navigator.push(
-                                                                            context,
-                                                                            MaterialPageRoute(builder: (builder) => HomePage()));
-                                                                        ;
-                                                                      },
-                                                                      child: Text(
-                                                                          'Delete'))
-                                                                ],
-                                                              );
-                                                            });
-                                                      },
-                                                      backgroundColor:
-                                                          Color(0xFFFE4A49),
-                                                      foregroundColor:
-                                                          Colors.white,
-                                                      icon: Icons.delete,
-                                                      label: 'Delete',
-                                                    ),
-                                                    document['Completed']
-                                                        ? SlidableAction(
+                                                                    FirebaseFirestore
+                                                                        .instance
+                                                                        .collection(
+                                                                            "NoteTask")
+                                                                        .doc(id)
+                                                                        .update({
+                                                                      'Completed':
+                                                                          true,
+                                                                    });
+                                                                  },
+                                                                  backgroundColor:
+                                                                      Color.fromARGB(
+                                                                          255,
+                                                                          44,
+                                                                          137,
+                                                                          190),
+                                                                  foregroundColor:
+                                                                      Colors
+                                                                          .white,
+                                                                  icon: Icons
+                                                                      .check,
+                                                                  label:
+                                                                      'Completed',
+                                                                ),
+                                                          SlidableAction(
                                                             onPressed:
-                                                                (context) {
-                                                              String id =
-                                                                  snapshot
-                                                                      .data!
-                                                                      .docs[
-                                                                          index]
-                                                                      .id;
-                                                              FirebaseFirestore
-                                                                  .instance
-                                                                  .collection(
-                                                                      "NoteTask")
-                                                                  .doc(id)
-                                                                  .update({
-                                                                'Completed':
-                                                                    false,
-                                                              });
-                                                            },
+                                                                (context) {},
                                                             backgroundColor:
                                                                 Color.fromARGB(
                                                                     255,
-                                                                    202,
-                                                                    35,
-                                                                    199),
-                                                            foregroundColor:
-                                                                Colors.white,
-                                                            icon: Icons.cancel,
-                                                            label: 'UnComplete',
-                                                          )
-                                                        : SlidableAction(
-                                                            onPressed:
-                                                                (context) {
-                                                              String id =
-                                                                  snapshot
-                                                                      .data!
-                                                                      .docs[
-                                                                          index]
-                                                                      .id;
-                                                              FirebaseFirestore
-                                                                  .instance
-                                                                  .collection(
-                                                                      "NoteTask")
-                                                                  .doc(id)
-                                                                  .update({
-                                                                'Completed':
-                                                                    true,
-                                                              });
-                                                            },
-                                                            backgroundColor:
-                                                                Color.fromARGB(
-                                                                    255,
+                                                                    190,
                                                                     44,
-                                                                    137,
-                                                                    190),
+                                                                    98),
                                                             foregroundColor:
                                                                 Colors.white,
-                                                            icon: Icons.check,
-                                                            label: 'Completed',
+                                                            icon:
+                                                                Icons.push_pin,
+                                                            label: 'Pin',
                                                           ),
-                                                    SlidableAction(
-                                                      onPressed: (context) {},
-                                                      backgroundColor:
-                                                          Color.fromARGB(
-                                                              255, 190, 44, 98),
-                                                      foregroundColor:
-                                                          Colors.white,
-                                                      icon: Icons.push_pin,
-                                                      label: 'Pin',
-                                                    ),
-                                                    document['Protected']
-                                                        ? SlidableAction(
-                                                            onPressed:
-                                                                (context) {
-                                                              showDialog(
-                                                                context:
-                                                                    context,
-                                                                builder:
-                                                                    (BuildContext
-                                                                        context) {
-                                                                  return AlertDialog(
-                                                                    title: Text(
-                                                                        'Protected password'),
-                                                                    content:
-                                                                        Column(
-                                                                      mainAxisSize:
-                                                                          MainAxisSize
-                                                                              .min,
-                                                                      children: [
-                                                                        TextFormField(
-                                                                          controller:
-                                                                              _unPasswordController,
-                                                                          obscureText:
-                                                                              true,
-                                                                          decoration: InputDecoration(
-                                                                              labelText: "Enter Password",
-                                                                              labelStyle: TextStyle(fontSize: 15, color: Color.fromARGB(255, 33, 31, 31)),
-                                                                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(width: 1.5, color: Color.fromARGB(255, 241, 159, 108))),
-                                                                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(width: 1, color: Colors.grey)),
-                                                                              hintText: 'Enter password'),
-                                                                        ),
-                                                                      ],
-                                                                    ),
-                                                                    actions: [
-                                                                      TextButton(
-                                                                        onPressed:
-                                                                            () =>
-                                                                                Navigator.pop(context),
-                                                                        child: Text(
-                                                                            'Cancel'),
-                                                                      ),
-                                                                      TextButton(
-                                                                        onPressed:
-                                                                            () {
-                                                                          if (_unPasswordController.text.trim() ==
-                                                                              document['Password']) {
-                                                                            String
-                                                                                id =
-                                                                                snapshot.data!.docs[index].id;
-                                                                            FirebaseFirestore.instance.collection('NoteTask').doc(id).update({
-                                                                              'Protected': false,
-                                                                              'Password': '',
-                                                                            });
-                                                                            Navigator.pop(context);
-                                                                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Unlock successfully")));
-                                                                          } else {
-                                                                            setState(() {
-                                                                              _unPasswordController.text = '';
-                                                                            });
-                                                                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Password is wrong! Please check!")));
-                                                                          }
-                                                                          setState(
-                                                                              () {
-                                                                            _passwordController.text =
-                                                                                '';
-                                                                            _confirmPasswordController.text =
-                                                                                '';
-                                                                          });
-                                                                        },
-                                                                        child: Text(
-                                                                            'Unlock'),
-                                                                      ),
-                                                                    ],
-                                                                  );
-                                                                },
-                                                              );
-                                                            },
-                                                            backgroundColor:
-                                                                Color.fromARGB(
-                                                                    255,
-                                                                    48,
-                                                                    48,
-                                                                    176),
-                                                            foregroundColor:
-                                                                Colors.white,
-                                                            icon: Icons
-                                                                .lock_clock_rounded,
-                                                            label: 'UnProtect',
-                                                          )
-                                                        : SlidableAction(
-                                                            onPressed:
-                                                                (context) {
-                                                              showDialog(
-                                                                context:
-                                                                    context,
-                                                                builder:
-                                                                    (BuildContext
-                                                                        context) {
-                                                                  return AlertDialog(
-                                                                    title: Text(
-                                                                        'Set password'),
-                                                                    content:
-                                                                        Column(
-                                                                      mainAxisSize:
-                                                                          MainAxisSize
-                                                                              .min,
-                                                                      children: [
-                                                                        TextFormField(
-                                                                          controller:
-                                                                              _passwordController,
-                                                                          obscureText:
-                                                                              true,
-                                                                          decoration: InputDecoration(
-                                                                              labelText: "Enter Password",
-                                                                              labelStyle: TextStyle(fontSize: 15, color: Color.fromARGB(255, 33, 31, 31)),
-                                                                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(width: 1.5, color: Color.fromARGB(255, 241, 159, 108))),
-                                                                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(width: 1, color: Colors.grey)),
-                                                                              hintText: 'Enter password'),
-                                                                        ),
-                                                                        SizedBox(
-                                                                          height:
-                                                                              10,
-                                                                        ),
-                                                                        TextFormField(
-                                                                          controller:
-                                                                              _confirmPasswordController,
-                                                                          obscureText:
-                                                                              true,
-                                                                          decoration: InputDecoration(
-                                                                              labelText: "Confirm Password",
-                                                                              labelStyle: TextStyle(fontSize: 15, color: Color.fromARGB(255, 33, 31, 31)),
-                                                                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(width: 1.5, color: Color.fromARGB(255, 241, 159, 108))),
-                                                                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(width: 1, color: Colors.grey)),
-                                                                              hintText: 'Confirm Password'),
-                                                                        ),
-                                                                      ],
-                                                                    ),
-                                                                    actions: [
-                                                                      TextButton(
-                                                                        onPressed:
-                                                                            () =>
-                                                                                Navigator.pop(context),
-                                                                        child: Text(
-                                                                            'Cancel'),
-                                                                      ),
-                                                                      TextButton(
-                                                                        onPressed:
-                                                                            () {
-                                                                          if (_passwordController.text.trim() ==
-                                                                              _confirmPasswordController.text.trim()) {
-                                                                            String
-                                                                                id =
-                                                                                snapshot.data!.docs[index].id;
-                                                                            String
-                                                                                password =
-                                                                                _passwordController.text.trim();
-                                                                            FirebaseFirestore.instance.collection('NoteTask').doc(id).update({
-                                                                              'Protected': true,
-                                                                              'Password': password,
-                                                                            });
-                                                                            Navigator.pop(context);
-                                                                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Lock successfully")));
-                                                                          } else {
-                                                                            setState(() {
-                                                                              _confirmPasswordController.text = '';
-                                                                              _passwordController.text = '';
-                                                                            });
-                                                                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Password is wrong! Please check your password")));
-                                                                          }
-                                                                          setState(
-                                                                              () {
-                                                                            _unPasswordController.text =
-                                                                                '';
-                                                                          });
-                                                                        },
-                                                                        child: Text(
-                                                                            'Set'),
-                                                                      ),
-                                                                    ],
-                                                                  );
-                                                                },
-                                                              );
-                                                            },
-                                                            backgroundColor:
-                                                                Color.fromARGB(
-                                                                    255,
-                                                                    107,
-                                                                    203,
-                                                                    12),
-                                                            foregroundColor:
-                                                                Colors.white,
-                                                            icon: Icons.lock,
-                                                            label: 'Protect',
-                                                          ),
-                                                    // SlidableAction(
-                                                    //   onPressed: (context) {
-                                                    //     String id = snapshot
-                                                    //         .data!.docs[index].id;
-                                                    //     FirebaseFirestore.instance
-                                                    //         .collection("NoteTask")
-                                                    //         .doc(id)
-                                                    //         .update({
-                                                    //       'Completed': false,
-                                                    //     });
-                                                    //   },
-                                                    //   backgroundColor: Color.fromARGB(
-                                                    //       255, 202, 35, 199),
-                                                    //   foregroundColor: Colors.white,
-                                                    //   icon: Icons.cancel,
-                                                    //   label: 'UnComplete',
-                                                    // ),
-                                                  ]),
-                                              child: GridCard(
-                                                title: document['title'] == null
-                                                    ? "Hey There"
-                                                    : document['title'],
-                                                iconData: iconData,
-                                                colorIcon: iconColor,
-                                                timeStart:
-                                                    document['TimeFinish'],
-                                                check:
-                                                    selected[index].checkValue,
-                                                iconBGColor: Colors.white,
-                                                index: index,
-                                                onChanged: onChange,
-                                                completed:
-                                                    document['Completed'],
-                                                timeFinish:
-                                                    document['TimeFinish'],
-                                                dateFinish:
-                                                    document['DateFinish'],
-                                                protected:
-                                                    document['Protected'],
-                                              )),
-                                        );
-                                      });
-                            },
-                          ),
-                        )
+                                                          document['Protected']
+                                                              ? SlidableAction(
+                                                                  onPressed:
+                                                                      (context) {
+                                                                    showDialog(
+                                                                      context:
+                                                                          context,
+                                                                      builder:
+                                                                          (BuildContext
+                                                                              context) {
+                                                                        return AlertDialog(
+                                                                          title:
+                                                                              Text('Protected password'),
+                                                                          content:
+                                                                              Column(
+                                                                            mainAxisSize:
+                                                                                MainAxisSize.min,
+                                                                            children: [
+                                                                              TextFormField(
+                                                                                controller: _unPasswordController,
+                                                                                obscureText: true,
+                                                                                decoration: InputDecoration(labelText: "Enter Password", labelStyle: TextStyle(fontSize: 15, color: Color.fromARGB(255, 33, 31, 31)), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(width: 1.5, color: Color.fromARGB(255, 241, 159, 108))), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(width: 1, color: Colors.grey)), hintText: 'Enter password'),
+                                                                              ),
+                                                                            ],
+                                                                          ),
+                                                                          actions: [
+                                                                            TextButton(
+                                                                              onPressed: () => Navigator.pop(context),
+                                                                              child: Text('Cancel'),
+                                                                            ),
+                                                                            TextButton(
+                                                                              onPressed: () {
+                                                                                if (_unPasswordController.text.trim() == document['Password']) {
+                                                                                  String id = snapshot.data!.docs[index].id;
+                                                                                  FirebaseFirestore.instance.collection('NoteTask').doc(id).update({
+                                                                                    'Protected': false,
+                                                                                    'Password': '',
+                                                                                  });
+                                                                                  Navigator.pop(context);
+                                                                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Unlock successfully")));
+                                                                                } else {
+                                                                                  setState(() {
+                                                                                    _unPasswordController.text = '';
+                                                                                  });
+                                                                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Password is wrong! Please check!")));
+                                                                                }
+                                                                                setState(() {
+                                                                                  _passwordController.text = '';
+                                                                                  _confirmPasswordController.text = '';
+                                                                                });
+                                                                              },
+                                                                              child: Text('Unlock'),
+                                                                            ),
+                                                                          ],
+                                                                        );
+                                                                      },
+                                                                    );
+                                                                  },
+                                                                  backgroundColor:
+                                                                      Color.fromARGB(
+                                                                          255,
+                                                                          48,
+                                                                          48,
+                                                                          176),
+                                                                  foregroundColor:
+                                                                      Colors
+                                                                          .white,
+                                                                  icon: Icons
+                                                                      .lock_clock_rounded,
+                                                                  label:
+                                                                      'UnProtect',
+                                                                )
+                                                              : SlidableAction(
+                                                                  onPressed:
+                                                                      (context) {
+                                                                    showDialog(
+                                                                      context:
+                                                                          context,
+                                                                      builder:
+                                                                          (BuildContext
+                                                                              context) {
+                                                                        return AlertDialog(
+                                                                          title:
+                                                                              Text('Set password'),
+                                                                          content:
+                                                                              Column(
+                                                                            mainAxisSize:
+                                                                                MainAxisSize.min,
+                                                                            children: [
+                                                                              TextFormField(
+                                                                                controller: _passwordController,
+                                                                                obscureText: true,
+                                                                                decoration: InputDecoration(labelText: "Enter Password", labelStyle: TextStyle(fontSize: 15, color: Color.fromARGB(255, 33, 31, 31)), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(width: 1.5, color: Color.fromARGB(255, 241, 159, 108))), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(width: 1, color: Colors.grey)), hintText: 'Enter password'),
+                                                                              ),
+                                                                              SizedBox(
+                                                                                height: 10,
+                                                                              ),
+                                                                              TextFormField(
+                                                                                controller: _confirmPasswordController,
+                                                                                obscureText: true,
+                                                                                decoration: InputDecoration(labelText: "Confirm Password", labelStyle: TextStyle(fontSize: 15, color: Color.fromARGB(255, 33, 31, 31)), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(width: 1.5, color: Color.fromARGB(255, 241, 159, 108))), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(width: 1, color: Colors.grey)), hintText: 'Confirm Password'),
+                                                                              ),
+                                                                            ],
+                                                                          ),
+                                                                          actions: [
+                                                                            TextButton(
+                                                                              onPressed: () => Navigator.pop(context),
+                                                                              child: Text('Cancel'),
+                                                                            ),
+                                                                            TextButton(
+                                                                              onPressed: () {
+                                                                                if (_passwordController.text.trim() == _confirmPasswordController.text.trim()) {
+                                                                                  String id = snapshot.data!.docs[index].id;
+                                                                                  String password = _passwordController.text.trim();
+                                                                                  FirebaseFirestore.instance.collection('NoteTask').doc(id).update({
+                                                                                    'Protected': true,
+                                                                                    'Password': password,
+                                                                                  });
+                                                                                  Navigator.pop(context);
+                                                                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Lock successfully")));
+                                                                                } else {
+                                                                                  setState(() {
+                                                                                    _confirmPasswordController.text = '';
+                                                                                    _passwordController.text = '';
+                                                                                  });
+                                                                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Password is wrong! Please check your password")));
+                                                                                }
+                                                                                setState(() {
+                                                                                  _unPasswordController.text = '';
+                                                                                });
+                                                                              },
+                                                                              child: Text('Set'),
+                                                                            ),
+                                                                          ],
+                                                                        );
+                                                                      },
+                                                                    );
+                                                                  },
+                                                                  backgroundColor:
+                                                                      Color.fromARGB(
+                                                                          255,
+                                                                          107,
+                                                                          203,
+                                                                          12),
+                                                                  foregroundColor:
+                                                                      Colors
+                                                                          .white,
+                                                                  icon: Icons
+                                                                      .lock,
+                                                                  label:
+                                                                      'Protect',
+                                                                ),
+                                                        ]),
+                                                    child: GridCard(
+                                                      title: document[
+                                                                  'title'] ==
+                                                              null
+                                                          ? "Hey There"
+                                                          : document['title'],
+                                                      iconData: iconData,
+                                                      colorIcon: iconColor,
+                                                      timeStart: document[
+                                                          'TimeFinish'],
+                                                      check: selected[index]
+                                                          .checkValue,
+                                                      iconBGColor: Colors.white,
+                                                      index: index,
+                                                      onChanged: onChange,
+                                                      completed:
+                                                          document['Completed'],
+                                                      timeFinish: document[
+                                                          'TimeFinish'],
+                                                      dateFinish: document[
+                                                          'DateFinish'],
+                                                      protected:
+                                                          document['Protected'],
+                                                    )),
+                                              );
+                                            });
+                                  },
+                                ),
+                              )
                         // rest of the UI code
                       ],
                     );
                   },
                 ),
               ));
+  }
+
+  _addDateBar() {
+    return StatefulBuilder(builder: (context, setState) {
+      return Container(
+        child: DatePicker(
+          height: 100,
+          width: 80,
+          DateTime.now(),
+          initialSelectedDate: DateTime.now(),
+          selectionColor: Color.fromARGB(255, 156, 65, 179),
+          selectedTextColor: Colors.white,
+          dateTextStyle: GoogleFonts.lato(
+              textStyle: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey,
+          )),
+          monthTextStyle: GoogleFonts.lato(
+              textStyle: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey,
+          )),
+          dayTextStyle: GoogleFonts.lato(
+              textStyle: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey,
+          )),
+          onDateChange: (selectedDate) {
+            setState(() {
+              _selectedDate = selectedDate;
+            });
+          },
+        ),
+      );
+    });
   }
 
   void _changePassword(BuildContext context) {
@@ -1468,47 +1406,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  _addDateBar() {
-    return StatefulBuilder(
-      builder: (context, setState) {
-        return Container(
-          child: DatePicker(
-            height: 100,
-            width: 80,
-            DateTime.now(),
-            initialSelectedDate: DateTime.now(),
-            selectionColor: Color.fromARGB(255, 156, 65, 179),
-            selectedTextColor: Colors.white,
-            dateTextStyle: GoogleFonts.lato(
-                textStyle: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey,
-            )),
-            monthTextStyle: GoogleFonts.lato(
-                textStyle: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey,
-            )),
-            dayTextStyle: GoogleFonts.lato(
-                textStyle: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey,
-            )),
-            onDateChange: (selectedDate) {
-              setState(() {
-                _selectedDate = selectedDate;
-              });
-              // print(_selectedDate);
-            },
-          ),
-        );
-      },
-    );
-  }
-
   List<Widget> _buildAppBarActions() {
     if (_isSearching) {
       return [];
@@ -1536,6 +1433,79 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       selected[index].checkValue = !selected[index].checkValue;
     });
+  }
+
+  void _searchNotes(String query) {
+    List<Map<String, dynamic>> results = [];
+    if (query.isEmpty) {
+      setState(() {
+        _isSearching = false;
+        _noteList = _allNotes;
+      });
+    } else {
+      _noteStream = FirebaseFirestore.instance
+          .collection('NoteTask')
+          .where('title', isGreaterThanOrEqualTo: query)
+          .where('title', isLessThan: query + 'z')
+          .where('decription', isGreaterThanOrEqualTo: query)
+          .where('decription', isLessThan: query + 'z')
+          .snapshots();
+
+      _noteStream.listen((QuerySnapshot snapshot) {
+        _noteList =
+            snapshot.docs.map((e) => e.data() as Map<String, dynamic>).toList();
+        results = _noteList;
+      });
+
+      setState(() {
+        _noteList = results;
+        _isSearching = true;
+      });
+    }
+  }
+
+  Widget _buildNotesListView() {
+    return ListView.builder(
+      itemCount: _noteList.length,
+      itemBuilder: (BuildContext context, int index) {
+        Map<String, dynamic> noteData = _noteList[index];
+        var timeStart = noteData['TimeStart'].toString();
+        var timeFinish = noteData['TimeFinish'].toString();
+        return Card(
+          elevation: 4,
+          color: Color(0xff2a2e3d),
+          child: ListTile(
+            leading: Icon(
+              Icons.note_outlined,
+              color: Colors.white,
+              size: 30,
+            ),
+            trailing: Icon(
+              Icons.arrow_circle_right,
+              color: Colors.white,
+              size: 30,
+            ),
+            title: Text(
+              noteData['title'].toString(),
+              style: TextStyle(color: Colors.white),
+            ),
+            subtitle: Text(
+              "$timeStart -  $timeFinish",
+              style: TextStyle(color: Colors.white),
+            ),
+            onTap: () {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => ViewNote(
+                            document: noteData,
+                            id: index.toString(),
+                          )));
+            },
+          ),
+        );
+      },
+    );
   }
 }
 
@@ -1570,3 +1540,7 @@ class Select {
 //                   (route) => false);
 //             },
 //             icon: Icon(Icons.arrow_back)),
+
+
+                                        // print(_selectedDate);
+ 
