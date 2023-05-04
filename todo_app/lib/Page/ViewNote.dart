@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:todo_app/Custom/MyInputFeild.dart';
 import 'package:todo_app/Page/HomePage.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter_sound/flutter_sound.dart';
 
 class ViewNote extends StatefulWidget {
   ViewNote({super.key, required this.document, required this.id});
@@ -31,19 +33,38 @@ class _ViewNoteState extends State<ViewNote> {
   var noteCategory;
   bool edit = false;
   String _finishTime = DateFormat("hh:mm a").format(DateTime.now()).toString();
-
   String _startTime = DateFormat("hh:mm a").format(DateTime.now()).toString();
   int _selectedRemind = 5;
   List<int> remindList = [5, 10, 15, 20];
-
   String _selectedRepeat = "None";
   List<String> repeatList = ["None", "Daily"];
   PlatformFile? pickedFile;
   UploadTask? uploadTask;
+  PlatformFile? pickedAudioFile;
+  UploadTask? uploadAudioTask;
+  bool isCheckAudio = false;
   bool isCheck = false;
   var fileNotes;
+  var audioNotes;
+  bool isPlaying = false;
+  double duration = 0.0;
+  double position = 0.0;
+  FlutterSoundPlayer? _audioPlayer;
+  AudioPlayer? _audioplayersPlayer;
 
-  Future uploadFile() async {
+  final storage = FirebaseStorage.instance;
+  final AudioPlayer audioPlayer = AudioPlayer();
+
+// Load and play the audio file from Firebase Storage
+  Future<void> playAudioFromFirebase(String audioUrl) async {
+    if (audioUrl != null) {
+      final ref = storage.refFromURL(audioUrl);
+      final url = await ref.getDownloadURL();
+      await audioPlayer.play(url);
+    }
+  }
+
+  Future uploadImagesFile() async {
     final path = 'files/${pickedFile!.name}';
     final file = File(pickedFile!.path!);
 
@@ -61,13 +82,66 @@ class _ViewNoteState extends State<ViewNote> {
     });
   }
 
-  Future selectFile() async {
-    final results = await FilePicker.platform.pickFiles();
+  Future selectImagesFile() async {
+    final results = await FilePicker.platform.pickFiles(type: FileType.image);
     if (results == null) return;
 
     setState(() {
       isCheck = true;
       pickedFile = results.files.first;
+    });
+  }
+
+  Future uploadAudioFile() async {
+    final path = 'audios/${pickedAudioFile!.name}';
+    final file = File(pickedAudioFile!.path!);
+
+    final ref = FirebaseStorage.instance.ref().child(path);
+    setState(() {
+      uploadAudioTask = ref.putFile(file);
+    });
+
+    final snapshot = await uploadAudioTask!.whenComplete(() {});
+    final urlDownload = await snapshot.ref.getDownloadURL();
+    print('Download Link: $urlDownload');
+    setState(() {
+      audioNotes = urlDownload;
+      uploadAudioTask = null;
+    });
+  }
+
+  Future selectAudioFiles() async {
+    final results = await FilePicker.platform.pickFiles(type: FileType.audio);
+    if (results == null) return;
+
+    setState(() {
+      isCheckAudio = true;
+      pickedAudioFile = results.files.first;
+      _audioPlayer = FlutterSoundPlayer();
+      _audioPlayer!.openAudioSession();
+    });
+  }
+
+  void pauseAudio() async {
+    await _audioPlayer!.pausePlayer();
+    setState(() {
+      isPlaying = false;
+    });
+  }
+
+  void playAudio() async {
+    await _audioPlayer!.startPlayer(
+      fromURI: audioNotes!,
+      whenFinished: () {
+        setState(() {
+          isPlaying = false;
+          position = duration;
+        });
+      },
+    );
+
+    setState(() {
+      isPlaying = true;
     });
   }
 
@@ -91,7 +165,7 @@ class _ViewNoteState extends State<ViewNote> {
     _selectedRemind = widget.document['Remind'];
     _selectedRepeat = widget.document['Repeat'];
     fileNotes = widget.document['FileNotes'];
-    print(fileNotes);
+    audioNotes = widget.document['AudioNotes'];
   }
 
   @override
@@ -241,7 +315,7 @@ class _ViewNoteState extends State<ViewNote> {
                       SizedBox(
                         height: 25,
                       ),
-                       label("Pick Files(Images, Videos,Audio)"),
+                      label("Pick Images"),
                       SizedBox(
                         height: 12,
                       ),
@@ -254,22 +328,154 @@ class _ViewNoteState extends State<ViewNote> {
                               width: MediaQuery.of(context).size.width,
                               height: MediaQuery.of(context).size.height,
                               fit: BoxFit.cover,
-                            )  ),
+                            )),
                           const SizedBox(height: 12),
                           Row(
-                            children: [
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(backgroundColor: edit ?Colors.amber : Colors.grey),
-                                  child: const Text('Selected File'),
-                                  onPressed: edit ? selectFile : (){}),
-                              SizedBox(width: 25),
-                              ElevatedButton(
-                                  style: ElevatedButton.styleFrom(backgroundColor: edit && isCheck ?Colors.green : Colors.grey),
-                                  child: const Text('Upload File'),
-                                  onPressed: edit && isCheck ? uploadFile : (){}),
-                            ],
+                            children: edit
+                                ? [
+                                    ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                            backgroundColor: edit
+                                                ? Colors.amber
+                                                : Colors.grey),
+                                        child: const Text('Selected File'),
+                                        onPressed:
+                                            edit ? selectImagesFile : () {}),
+                                    SizedBox(width: 25),
+                                    ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                            backgroundColor: edit && isCheck
+                                                ? Colors.green
+                                                : Colors.grey),
+                                        child: const Text('Upload File'),
+                                        onPressed: edit && isCheck
+                                            ? uploadImagesFile
+                                            : () {}),
+                                  ]
+                                : [],
                           ),
                         ],
+                      ),
+                      label("Pick Audio"),
+                      SizedBox(
+                        height: 12,
+                      ),
+                      Column(
+                        children: edit
+                            ? [
+                                if (pickedAudioFile == null)
+                                ListTile(
+                                  shape: RoundedRectangleBorder(
+                                    side: BorderSide(
+                                        width: 2, color: Colors.amberAccent),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  leading: IconButton(
+                                      onPressed: () async {
+                                        await playAudioFromFirebase(audioNotes);
+                                      },
+                                      icon: Icon(Icons.play_arrow),
+                                      iconSize: 20,
+                                      color: Colors.white),
+                                  title: Text(
+                                    '${Uri.parse("$audioNotes").pathSegments.last.split("/")[1]}',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                  trailing: IconButton(
+                                    icon: Icon(Icons.pause),
+                                    iconSize: 20,
+                                    color: Colors.white,
+                                    onPressed: () {
+                                      audioPlayer.stop();
+                                    },
+                                  ),
+                                ),
+                                if (pickedAudioFile != null)
+                                  ListTile(
+                                    shape: RoundedRectangleBorder(
+                                      side: BorderSide(
+                                          width: 2, color: Colors.amberAccent),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    leading: IconButton(
+                                      onPressed: () {
+                                        if (audioNotes != null &&
+                                            _audioPlayer != null) {
+                                          if (!isPlaying) {
+                                            playAudio();
+                                          } else {
+                                            pauseAudio();
+                                          }
+                                        }
+                                      },
+                                      icon: Icon(isPlaying
+                                          ? Icons.pause
+                                          : Icons.play_arrow),
+                                      iconSize: 20,
+                                      color: Colors.white,
+                                    ),
+                                    title: Text(
+                                        '${Uri.parse("$audioNotes").pathSegments.last.split("/")[1]}',
+                                        style: TextStyle(
+                                            color: Colors.white, fontSize: 15)),
+                                    trailing: IconButton(
+                                      onPressed: () {
+                                        pauseAudio();
+                                      },
+                                      icon: Icon(Icons.pause),
+                                      iconSize: 20,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.amber),
+                                        child: const Text('Selected File'),
+                                        onPressed: selectAudioFiles),
+                                    SizedBox(width: 25),
+                                    ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                            backgroundColor: isCheckAudio
+                                                ? Colors.green
+                                                : Colors.grey),
+                                        child: const Text('Upload File'),
+                                        onPressed: isCheckAudio
+                                            ? uploadAudioFile
+                                            : () {}),
+                                  ],
+                                ),
+                              ]
+                            : [
+                                ListTile(
+                                  shape: RoundedRectangleBorder(
+                                    side: BorderSide(
+                                        width: 2, color: Colors.amberAccent),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  leading: IconButton(
+                                      onPressed: () async {
+                                        await playAudioFromFirebase(audioNotes);
+                                      },
+                                      icon: Icon(Icons.play_arrow),
+                                      iconSize: 20,
+                                      color: Colors.white),
+                                  title: Text(
+                                    '${Uri.parse("$audioNotes").pathSegments.last.split("/")[1]}',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                  trailing: IconButton(
+                                    icon: Icon(Icons.pause),
+                                    iconSize: 20,
+                                    color: Colors.white,
+                                    onPressed: () {
+                                      audioPlayer.stop();
+                                    },
+                                  ),
+                                )
+                              ],
                       ),
                       label("Category"),
                       SizedBox(
@@ -505,6 +711,7 @@ class _ViewNoteState extends State<ViewNote> {
           "TimeStart": _controllerTimeStart.text,
           "TimeFinish": _controllerTimeFinish.text,
           "FileNotes": fileNotes.toString(),
+          "AudioNotes": audioNotes.toString(),
           "Remind": _selectedRemind,
           "Repeat": _selectedRepeat
         });
