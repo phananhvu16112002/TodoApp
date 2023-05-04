@@ -6,6 +6,8 @@ import 'package:intl/intl.dart';
 import 'package:todo_app/Custom/GridCard.dart';
 import 'package:todo_app/Custom/NoteCard.dart';
 import 'package:todo_app/Page/AddNewNote.dart';
+import 'package:todo_app/Page/PhonePageAuth.dart';
+import 'package:todo_app/Page/RecycleBin.dart';
 import 'package:todo_app/Page/SignInPage.dart';
 import 'package:todo_app/Page/SignUpPage.dart';
 import 'package:todo_app/Page/ViewNote.dart';
@@ -40,7 +42,14 @@ class _HomePageState extends State<HomePage> {
   DateTime _selectedDate = DateTime.now();
   DateTime dateChoose = DateTime.now();
   late var _noteStream;
-  var notifyHelper;
+  var notifyHelper = NotificationsService();
+
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    PhonePageAuth();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -161,7 +170,8 @@ class _HomePageState extends State<HomePage> {
                                                 if (selected[i].checkValue) {
                                                   instance
                                                       .doc(selected[i].id)
-                                                      .delete();
+                                                      .update(
+                                                          {'isDeleted': true});
                                                 }
                                               }
                                               Navigator.push(
@@ -285,6 +295,21 @@ class _HomePageState extends State<HomePage> {
                 color: Color.fromARGB(255, 209, 206, 206)),
             ListTile(
               title: Text(
+                'Recycle Bin',
+                style: TextStyle(fontSize: 16),
+              ),
+              trailing: Icon(Icons.recycling_outlined),
+              onTap: () {
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (builder) => RecycleBin()));
+              },
+            ),
+            Container(
+                width: MediaQuery.of(context).size.width,
+                height: 3,
+                color: Color.fromARGB(255, 209, 206, 206)),
+            ListTile(
+              title: Text(
                 'Sign Out',
                 style: TextStyle(fontSize: 16),
               ),
@@ -299,14 +324,6 @@ class _HomePageState extends State<HomePage> {
                 width: MediaQuery.of(context).size.width,
                 height: 3,
                 color: Color.fromARGB(255, 209, 206, 206)),
-            ListTile(
-              title: Text(
-                'Recycle Bin',
-                style: TextStyle(fontSize: 16),
-              ),
-              trailing: Icon(Icons.recycling_outlined),
-              onTap: () {},
-            ),
           ],
         )),
         bottomNavigationBar:
@@ -360,6 +377,14 @@ class _HomePageState extends State<HomePage> {
                       return Center(child: Text('Error'));
                     }
                     final docs = snapshot.data!.docs;
+                    var count = 0;
+                    for (int i = 0; i < docs.length; i++) {
+                      var temp =
+                          snapshot.data!.docs[i].data() as Map<String, dynamic>;
+                      if (temp['isDeleted'] == false) {
+                        count++;
+                      }
+                    }
                     return Column(
                       children: [
                         SizedBox(
@@ -386,7 +411,7 @@ class _HomePageState extends State<HomePage> {
                                       ),
                                     ),
                                     Text(
-                                      "${docs.length}",
+                                      "${count}",
                                       style: TextStyle(
                                         fontSize: 24,
                                         fontWeight: FontWeight.bold,
@@ -400,11 +425,11 @@ class _HomePageState extends State<HomePage> {
                         SizedBox(
                           height: 20,
                         ),
-                        docs.length == 0
+                        count == 0
                             ? Container(
                                 child: Center(
                                     child: Opacity(
-                                        opacity: 0.25,
+                                        opacity: 0.5,
                                         child: Column(
                                           mainAxisAlignment:
                                               MainAxisAlignment.center,
@@ -450,51 +475,18 @@ class _HomePageState extends State<HomePage> {
                                                   snapshot.data!.docs[index]
                                                           .data()
                                                       as Map<String, dynamic>;
-
-                                              for (int i = 0;
-                                                  i <
-                                                      snapshot
-                                                          .data!.docs.length;
-                                                  i++) {
-                                                var currentDocument =
-                                                    snapshot.data!.docs[i];
-                                                Map<String, dynamic>
-                                                    currentDocumentData =
-                                                    currentDocument.data()
-                                                        as Map<String, dynamic>;
-                                                if (currentDocumentData !=
-                                                    null) {
-                                                  if (currentDocumentData[
-                                                          'Repeat'] ==
-                                                      'Daily') {
-                                                    notifyHelper.scheduledNotification(
-                                                        int.parse(
-                                                            currentDocumentData[
-                                                                    'TimeStart']
-                                                                .toString()
-                                                                .split(":")[0]),
-                                                        int.parse(
-                                                            currentDocumentData[
-                                                                    'TimeStart']
-                                                                .toString()
-                                                                .split(":")[1]),
-                                                        currentDocumentData);
-                                                  }
-
-                                                  notifyHelper.scheduledNotification(
-                                                      int.parse(
-                                                          currentDocumentData[
-                                                                  'TimeStart']
-                                                              .toString()
-                                                              .split(":")[0]),
-                                                      int.parse(
-                                                          currentDocumentData[
-                                                                  'TimeStart']
-                                                              .toString()
-                                                              .split(":")[1]),
-                                                      currentDocumentData);
-                                                }
-                                              }
+                                              if (document['Repeat'] == 'Daily')
+                                                notifyHelper
+                                                    .scheduledNotification(
+                                                        int.parse(document[
+                                                                'TimeStart']
+                                                            .toString()
+                                                            .split(":")[0]),
+                                                        int.parse(document[
+                                                                'TimeStart']
+                                                            .toString()
+                                                            .split(":")[1]),
+                                                        document);
 
                                               switch (document['Category']) {
                                                 case "Work":
@@ -578,9 +570,10 @@ class _HomePageState extends State<HomePage> {
                                                                             onPressed:
                                                                                 () {
                                                                               String id = snapshot.data!.docs[index].id;
-                                                                              FirebaseFirestore.instance.collection('NoteTask').doc(id).delete();
+                                                                              FirebaseFirestore.instance.collection("NoteTask").doc(id).update({
+                                                                                'isDeleted': true,
+                                                                              });
                                                                               Navigator.push(context, MaterialPageRoute(builder: (builder) => HomePage()));
-                                                                              ;
                                                                             },
                                                                             child:
                                                                                 Text('Delete'))
@@ -661,14 +654,6 @@ class _HomePageState extends State<HomePage> {
                                                                   label:
                                                                       'Completed',
                                                                 ),
-                                                          // SlidableAction(
-                                                          //   onPressed: (context) {},
-                                                          //   backgroundColor: Color.fromARGB(
-                                                          //       255, 218, 35, 35),
-                                                          //   foregroundColor: Colors.white,
-                                                          //   icon: Icons.push_pin_outlined,
-                                                          //   label: 'Pin',
-                                                          // ),
                                                           document['Protected']
                                                               ? SlidableAction(
                                                                   onPressed:
@@ -822,32 +807,42 @@ class _HomePageState extends State<HomePage> {
                                                                       'Protect',
                                                                 )
                                                         ]),
-                                                    child: NoteCard(
-                                                      title: document[
-                                                                  'title'] ==
-                                                              null
-                                                          ? "Hey There"
-                                                          : document['title'],
-                                                      iconData: iconData,
-                                                      colorIcon: iconColor,
-                                                      timeStart:
-                                                          document['TimeStart'],
-                                                      check: selected[index]
-                                                          .checkValue,
-                                                      iconBGColor: Colors.white,
-                                                      index: index,
-                                                      onChanged: onChange,
-                                                      completed:
-                                                          document['Completed'],
-                                                      timeFinish: document[
-                                                          'TimeFinish'],
-                                                      dateFinish: document[
-                                                          'DateFinish'],
-                                                      protected:
-                                                          document['Protected'],
-                                                      description: document[
-                                                          'decription'],
-                                                    ),
+                                                    child: document[
+                                                                'isDeleted'] ==
+                                                            false
+                                                        ? NoteCard(
+                                                            title: document[
+                                                                        'title'] ==
+                                                                    null
+                                                                ? "Hey There"
+                                                                : document[
+                                                                    'title'],
+                                                            iconData: iconData,
+                                                            colorIcon:
+                                                                iconColor,
+                                                            timeStart: document[
+                                                                'TimeStart'],
+                                                            check:
+                                                                selected[index]
+                                                                    .checkValue,
+                                                            iconBGColor:
+                                                                Colors.white,
+                                                            index: index,
+                                                            onChanged: onChange,
+                                                            completed: document[
+                                                                'Completed'],
+                                                            timeFinish: document[
+                                                                'TimeFinish'],
+                                                            dateFinish: document[
+                                                                'DateFinish'],
+                                                            protected: document[
+                                                                'Protected'],
+                                                            description: document[
+                                                                'decription'],
+                                                            isDeleted: document[
+                                                                'isDeleted'],
+                                                          )
+                                                        : Container(),
                                                   ));
                                             })
                                         : GridView.builder(
@@ -946,9 +941,10 @@ class _HomePageState extends State<HomePage> {
                                                                             onPressed:
                                                                                 () {
                                                                               String id = snapshot.data!.docs[index].id;
-                                                                              FirebaseFirestore.instance.collection('NoteTask').doc(id).delete();
+                                                                              FirebaseFirestore.instance.collection("NoteTask").doc(id).update({
+                                                                                'isDeleted': true,
+                                                                              });
                                                                               Navigator.push(context, MaterialPageRoute(builder: (builder) => HomePage()));
-                                                                              ;
                                                                             },
                                                                             child:
                                                                                 Text('Delete'))
@@ -1029,21 +1025,6 @@ class _HomePageState extends State<HomePage> {
                                                                   label:
                                                                       'Completed',
                                                                 ),
-                                                          SlidableAction(
-                                                            onPressed:
-                                                                (context) {},
-                                                            backgroundColor:
-                                                                Color.fromARGB(
-                                                                    255,
-                                                                    190,
-                                                                    44,
-                                                                    98),
-                                                            foregroundColor:
-                                                                Colors.white,
-                                                            icon:
-                                                                Icons.push_pin,
-                                                            label: 'Pin',
-                                                          ),
                                                           document['Protected']
                                                               ? SlidableAction(
                                                                   onPressed:
@@ -1197,30 +1178,38 @@ class _HomePageState extends State<HomePage> {
                                                                       'Protect',
                                                                 ),
                                                         ]),
-                                                    child: GridCard(
-                                                      title: document[
-                                                                  'title'] ==
-                                                              null
-                                                          ? "Hey There"
-                                                          : document['title'],
-                                                      iconData: iconData,
-                                                      colorIcon: iconColor,
-                                                      timeStart: document[
-                                                          'TimeFinish'],
-                                                      check: selected[index]
-                                                          .checkValue,
-                                                      iconBGColor: Colors.white,
-                                                      index: index,
-                                                      onChanged: onChange,
-                                                      completed:
-                                                          document['Completed'],
-                                                      timeFinish: document[
-                                                          'TimeFinish'],
-                                                      dateFinish: document[
-                                                          'DateFinish'],
-                                                      protected:
-                                                          document['Protected'],
-                                                    )),
+                                                    child: document[
+                                                                'isDeleted'] ==
+                                                            false
+                                                        ? GridCard(
+                                                            title: document[
+                                                                        'title'] ==
+                                                                    null
+                                                                ? "Hey There"
+                                                                : document[
+                                                                    'title'],
+                                                            iconData: iconData,
+                                                            colorIcon:
+                                                                iconColor,
+                                                            timeStart: document[
+                                                                'TimeFinish'],
+                                                            check:
+                                                                selected[index]
+                                                                    .checkValue,
+                                                            iconBGColor:
+                                                                Colors.white,
+                                                            index: index,
+                                                            onChanged: onChange,
+                                                            completed: document[
+                                                                'Completed'],
+                                                            timeFinish: document[
+                                                                'TimeFinish'],
+                                                            dateFinish: document[
+                                                                'DateFinish'],
+                                                            protected: document[
+                                                                'Protected'],
+                                                          )
+                                                        : Container()),
                                               );
                                             });
                                   },
@@ -1473,8 +1462,6 @@ class _HomePageState extends State<HomePage> {
           .collection('NoteTask')
           .where('title', isGreaterThanOrEqualTo: query)
           .where('title', isLessThan: query + 'z')
-          .where('decription', isGreaterThanOrEqualTo: query)
-          .where('decription', isLessThan: query + 'z')
           .snapshots();
 
       _noteStream.listen((QuerySnapshot snapshot) {
@@ -1556,17 +1543,3 @@ class Select {
   bool checkValue = false;
   Select(this.id, this.checkValue);
 }
-
-// leading: IconButton(
-//             onPressed: () async {
-//               await authClass.logOut();
-//               Navigator.pushAndRemoveUntil(
-//                   context,
-//                   MaterialPageRoute(builder: (builder) => SignUpPage()),
-//                   (route) => false);
-//             },
-//             icon: Icon(Icons.arrow_back)),
-
-
-                                        // print(_selectedDate);
- 

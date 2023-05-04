@@ -58,6 +58,9 @@ dependencies:
   file_picker: ^5.2.11
   flutter_sound: ^8.0.8
   audioplayers: ^0.20.1
+  image_picker: ^0.8.7+4
+  video_player: ^2.1.6
+  video_thumbnail: ^0.5.3
 
   
 

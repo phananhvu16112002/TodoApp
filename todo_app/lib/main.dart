@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:todo_app/Page/AddNewNote.dart';
 import 'package:todo_app/Page/HomePage.dart';
+import 'package:todo_app/Page/PhonePageAuth.dart';
 import 'package:todo_app/Page/SignInPage.dart';
 import 'package:todo_app/Page/SignUpPage.dart';
 import 'package:todo_app/Service/Auth_Service.dart';
@@ -23,6 +24,13 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   Widget currentPage = SignUpPage();
   AuthClass authClass = AuthClass();
+
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    
+    super.dispose();
+  }
 
   @override
   void initState() {

@@ -12,6 +12,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_sound/flutter_sound.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:video_player/video_player.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
 
 class AddNewNote extends StatefulWidget {
   const AddNewNote({super.key});
@@ -35,25 +38,36 @@ class _AddNewNoteState extends State<AddNewNote> {
   bool completed = false;
   bool protected = false;
   bool pinned = false;
-  bool isCheckImage = false;
-  bool isCheckAudio = false;
+  bool isDeleted = false;
   String _selectedRepeat = "None";
   List<String> repeatList = ["None", "Daily"];
   String password = '';
   var noteType = '';
   var noteCategory = '';
+  bool isCheckImage = false;
+  bool isCheckAudio = false;
+  bool isCheckVideo = false;
   PlatformFile? pickedImageFile;
   PlatformFile? pickedAudioFile;
   UploadTask? uploadImageTask;
   UploadTask? uploadAudioTask;
   var fileNotes;
-  List<String> audioUrls = [];
   var audioNotes;
   bool isPlaying = false;
   double duration = 0.0;
   double position = 0.0;
   FlutterSoundPlayer? _audioPlayer;
   AudioPlayer? _audioplayersPlayer;
+
+  Future selectImagesFile() async {
+    final results = await FilePicker.platform.pickFiles(type: FileType.image);
+    if (results == null) return;
+
+    setState(() {
+      isCheckImage = true;
+      pickedImageFile = results.files.first;
+    });
+  }
 
   Future uploadImagesFile() async {
     final path = 'files/${pickedImageFile!.name}';
@@ -73,14 +87,17 @@ class _AddNewNoteState extends State<AddNewNote> {
     });
   }
 
-  Future selectImagesFile() async {
-    final results = await FilePicker.platform.pickFiles(type: FileType.image);
+  Future selectAudioFiles() async {
+    final results = await FilePicker.platform.pickFiles(type: FileType.audio);
     if (results == null) return;
 
     setState(() {
-      isCheckImage = true;
-      pickedImageFile = results.files.first;
+      isCheckAudio = true;
+      pickedAudioFile = results.files.first;
+      _audioPlayer = FlutterSoundPlayer();
+      _audioPlayer!.openAudioSession();
     });
+    // print(" ----------------------------------------- ${pickedAudioFile!.path!}");
   }
 
   Future uploadAudioFile() async {
@@ -101,19 +118,6 @@ class _AddNewNoteState extends State<AddNewNote> {
       audioNotes = urlDownload;
       uploadAudioTask = null;
     });
-  }
-
-  Future selectAudioFiles() async {
-    final results = await FilePicker.platform.pickFiles(type: FileType.audio);
-    if (results == null) return;
-
-    setState(() {
-      isCheckAudio = true;
-      pickedAudioFile = results.files.first;
-      _audioPlayer = FlutterSoundPlayer();
-      _audioPlayer!.openAudioSession();
-    });
-    // print(" ----------------------------------------- ${pickedAudioFile!.path!}");
   }
 
   void pauseAudio() async {
@@ -143,6 +147,11 @@ class _AddNewNoteState extends State<AddNewNote> {
   void dispose() {
     // TODO: implement dispose
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
   }
 
   @override
@@ -229,9 +238,11 @@ class _AddNewNoteState extends State<AddNewNote> {
                       SizedBox(
                         height: 25,
                       ),
+
+                      /////////////////////Pick Images ///////////////////////
                       label("Pick Images"),
                       SizedBox(
-                        height: 12,
+                        height: 2,
                       ),
                       Column(
                         children: [
@@ -267,9 +278,10 @@ class _AddNewNoteState extends State<AddNewNote> {
                       SizedBox(
                         height: 25,
                       ),
+                      /////////////////Pick Audio////////////////////
                       label("Pick Audio"),
                       SizedBox(
-                        height: 12,
+                        height: 2,
                       ),
                       Column(
                         children: [
@@ -330,10 +342,12 @@ class _AddNewNoteState extends State<AddNewNote> {
                           ),
                         ],
                       ),
-                      label("Category"),
+                      ////////////////////Pick Video/////////////////////////
+
                       SizedBox(
-                        height: 12,
+                        height: 25,
                       ),
+                      label("Category"),
                       SizedBox(
                         height: 25,
                       ),
@@ -570,6 +584,7 @@ class _AddNewNoteState extends State<AddNewNote> {
             "DateFinish": _controllerDateTime.text,
             "TimeStart": _controllerTimeStart.text,
             "TimeFinish": _controllerTimeFinish.text,
+            "isDeleted": isDeleted,
             "Remind": _selectedRemind,
             "Repeat": _selectedRepeat,
             "Completed": completed,
@@ -594,10 +609,11 @@ class _AddNewNoteState extends State<AddNewNote> {
         } else if (_noteTitleController.text.isEmpty ||
             _noteDescriptionController.text.isEmpty ||
             _controllerTimeStart.text.isEmpty ||
+            fileNotes.toString().isEmpty ||
+            audioNotes.toString().isEmpty ||
             _controllerTimeFinish.text.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(
-                  "Required add Title and Description and Time Start and Finish ")));
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("Please enter all your note ")));
         }
       },
       child: _noteTitleController.text.isNotEmpty &&

@@ -14,7 +14,9 @@ class NoteCard extends StatelessWidget {
     required this.completed,
     required this.timeFinish,
     required this.dateFinish,
-    required this.protected, required this.description,
+    required this.protected,
+    required this.description,
+    required this.isDeleted,
   }) : super(key: key);
 
   final String title;
@@ -30,6 +32,7 @@ class NoteCard extends StatelessWidget {
   final String timeFinish;
   final String dateFinish;
   final String description;
+  final bool isDeleted;
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +68,9 @@ class NoteCard extends StatelessWidget {
               child: Card(
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20)),
-                  color: protected ? Color.fromARGB(255, 35, 70, 196) : Color(0xff2a2e3d),
+                  color: protected
+                      ? Color.fromARGB(255, 35, 70, 196)
+                      : Color(0xff2a2e3d),
                   child: Row(
                     children: [
                       SizedBox(

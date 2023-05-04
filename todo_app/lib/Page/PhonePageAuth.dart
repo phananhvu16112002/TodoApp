@@ -11,7 +11,7 @@ import 'package:todo_app/Page/HomePage.dart';
 import '../Service/Auth_Service.dart';
 
 class PhonePageAuth extends StatefulWidget {
-  const PhonePageAuth({super.key});
+   const PhonePageAuth({Key? key}) : super(key: key);
 
   @override
   State<PhonePageAuth> createState() => _PhonePageAuthState();
@@ -25,6 +25,15 @@ class _PhonePageAuthState extends State<PhonePageAuth> {
   AuthClass authClass = AuthClass();
   String verificationIDFinal = "";
   String smsCode = "";
+  Timer? timer;
+
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    phoneController.dispose();
+    timer?.cancel();
+    super.dispose();
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -149,7 +158,7 @@ class _PhonePageAuthState extends State<PhonePageAuth> {
 
   void StartTimer() {
     const onsec = Duration(seconds: 1);
-    Timer timer = Timer.periodic(onsec, (timer) {
+     timer = Timer.periodic(onsec, (timer) {
       if (start == 0) {
         setState(() {
           timer.cancel();
