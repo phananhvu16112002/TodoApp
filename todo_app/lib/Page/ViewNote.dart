@@ -364,32 +364,33 @@ class _ViewNoteState extends State<ViewNote> {
                         children: edit
                             ? [
                                 if (pickedAudioFile == null)
-                                ListTile(
-                                  shape: RoundedRectangleBorder(
-                                    side: BorderSide(
-                                        width: 2, color: Colors.amberAccent),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  leading: IconButton(
-                                      onPressed: () async {
-                                        await playAudioFromFirebase(audioNotes);
-                                      },
-                                      icon: Icon(Icons.play_arrow),
+                                  ListTile(
+                                    shape: RoundedRectangleBorder(
+                                      side: BorderSide(
+                                          width: 2, color: Colors.amberAccent),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    leading: IconButton(
+                                        onPressed: () async {
+                                          await playAudioFromFirebase(
+                                              audioNotes);
+                                        },
+                                        icon: Icon(Icons.play_arrow),
+                                        iconSize: 20,
+                                        color: Colors.white),
+                                    title: Text(
+                                      '${Uri.parse("$audioNotes").pathSegments.last.split("/")[1]}',
+                                      style: TextStyle(color: Colors.white),
+                                    ),
+                                    trailing: IconButton(
+                                      icon: Icon(Icons.pause),
                                       iconSize: 20,
-                                      color: Colors.white),
-                                  title: Text(
-                                    '${Uri.parse("$audioNotes").pathSegments.last.split("/")[1]}',
-                                    style: TextStyle(color: Colors.white),
+                                      color: Colors.white,
+                                      onPressed: () {
+                                        audioPlayer.stop();
+                                      },
+                                    ),
                                   ),
-                                  trailing: IconButton(
-                                    icon: Icon(Icons.pause),
-                                    iconSize: 20,
-                                    color: Colors.white,
-                                    onPressed: () {
-                                      audioPlayer.stop();
-                                    },
-                                  ),
-                                ),
                                 if (pickedAudioFile != null)
                                   ListTile(
                                     shape: RoundedRectangleBorder(

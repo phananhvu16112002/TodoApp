@@ -305,9 +305,7 @@ class _HomePageState extends State<HomePage> {
                 style: TextStyle(fontSize: 16),
               ),
               trailing: Icon(Icons.recycling_outlined),
-              onTap: ()  {
-              
-              },
+              onTap: () {},
             ),
           ],
         )),
@@ -482,6 +480,19 @@ class _HomePageState extends State<HomePage> {
                                                                 .split(":")[1]),
                                                         currentDocumentData);
                                                   }
+
+                                                  notifyHelper.scheduledNotification(
+                                                      int.parse(
+                                                          currentDocumentData[
+                                                                  'TimeStart']
+                                                              .toString()
+                                                              .split(":")[0]),
+                                                      int.parse(
+                                                          currentDocumentData[
+                                                                  'TimeStart']
+                                                              .toString()
+                                                              .split(":")[1]),
+                                                      currentDocumentData);
                                                 }
                                               }
 

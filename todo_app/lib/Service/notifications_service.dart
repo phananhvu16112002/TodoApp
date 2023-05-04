@@ -70,7 +70,6 @@ class NotificationsService {
         payload: "${title}|" + "${description}|");
   }
 
-
   Future<void> _configureLocalTimeZone() async {
     tz.initializeTimeZones();
     final String timeZone = await FlutterNativeTimezone.getLocalTimezone();
@@ -87,7 +86,6 @@ class NotificationsService {
     }
     return scheduleDate;
   }
-
 
   Future selectNotification(String? payload) async {
     if (payload != null) {
