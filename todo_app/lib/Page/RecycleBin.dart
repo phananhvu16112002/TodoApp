@@ -30,20 +30,16 @@ class RecycleBin extends StatefulWidget {
 class _HomePageState extends State<RecycleBin> {
   List<Select> selected = [];
   AuthClass authClass = AuthClass();
-  TextEditingController _searchController = TextEditingController();
   late QuerySnapshot _snapshotData;
-  bool _isSearching = false;
   bool checkListView = true;
-  TextEditingController _passwordController = TextEditingController();
-  TextEditingController _confirmPasswordController = TextEditingController();
-  TextEditingController _unPasswordController = TextEditingController();
+  var _controllerTimeDelete = TextEditingController();
+  String _timeDelete = DateFormat("hh:mm a").format(DateTime.now()).toString();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   late List<Map<String, dynamic>> _noteList;
   late List<Map<String, dynamic>> _allNotes;
   DateTime _selectedDate = DateTime.now();
   DateTime dateChoose = DateTime.now();
   late var _noteStream;
-  var notifyHelper = NotificationsService();
 
   @override
   void dispose() {
@@ -66,10 +62,6 @@ class _HomePageState extends State<RecycleBin> {
       _noteList = _allNotes;
     });
 
-    notifyHelper = NotificationsService();
-    notifyHelper.initializeNotification();
-    notifyHelper.requestIOSPermissions();
-
     super.initState();
     getUserData();
   }
@@ -80,6 +72,7 @@ class _HomePageState extends State<RecycleBin> {
     String? userEmail = FirebaseAuth.instance.currentUser?.email;
     String? userName = FirebaseAuth.instance.currentUser?.displayName;
     String? userPhone = FirebaseAuth.instance.currentUser?.phoneNumber;
+    TimeOfDay _selectedTime = TimeOfDay(hour: 0, minute: 0);
 
     bool completed = false;
     List<Map<String, dynamic>> pinnedNotes = [];
@@ -422,6 +415,7 @@ class _HomePageState extends State<RecycleBin> {
                                     Map<String, dynamic> document =
                                         snapshot.data!.docs[index].data()
                                             as Map<String, dynamic>;
+                                    String id = snapshot.data!.docs[index].id;
                                     switch (document['Category']) {
                                       case "Work":
                                         iconData = Icons.run_circle_outlined;
@@ -580,18 +574,58 @@ class _HomePageState extends State<RecycleBin> {
                                                       Color.fromARGB(
                                                           255, 51, 180, 70),
                                                   foregroundColor: Colors.white,
-                                                  icon: Icons.recycling_outlined,
+                                                  icon:
+                                                      Icons.recycling_outlined,
                                                   label: 'Recycle',
                                                 ),
                                                 SlidableAction(
                                                   onPressed: (context) {
+                                                    showTimePicker(
+                                                            context: context,
+                                                            initialTime: TimeOfDay(
+                                                                hour: int.parse(
+                                                                    _timeDelete.split(
+                                                                            ":")[
+                                                                        0]),
+                                                                minute: int.parse(
+                                                                    _timeDelete
+                                                                        .split(":")[
+                                                                            1]
+                                                                        .split(
+                                                                            " ")[0])))
+                                                        .then((value) {
+                                                      if (value != null) {
+                                                        setState(() {
+                                                          _selectedTime =
+                                                              TimeOfDay(
+                                                                  hour: value
+                                                                      .hour,
+                                                                  minute: value
+                                                                      .minute);
+                                                        });
+                                                        String id = snapshot
+                                                            .data!
+                                                            .docs[index]
+                                                            .id;
+                                                        FirebaseFirestore
+                                                            .instance
+                                                            .collection(
+                                                                "NoteTask")
+                                                            .doc(id)
+                                                            .update({
+                                                          'TimeDelete':
+                                                              '${_selectedTime.hour}:${_selectedTime.minute}'
+                                                        });
+                                                      }
+                                                    });
                                                   },
                                                   backgroundColor:
-                                                      Color.fromARGB(255, 180, 126, 51),
+                                                      Color.fromARGB(
+                                                          255, 180, 126, 51),
                                                   foregroundColor: Colors.white,
                                                   icon: Icons.auto_delete,
                                                   label: 'Auto Delete',
-                                                )
+                                                ),
                                               ]),
                                           child: document['isDeleted'] == true
                                               ? NoteCard(

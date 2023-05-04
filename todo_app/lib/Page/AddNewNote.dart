@@ -585,6 +585,7 @@ class _AddNewNoteState extends State<AddNewNote> {
             "TimeStart": _controllerTimeStart.text,
             "TimeFinish": _controllerTimeFinish.text,
             "isDeleted": isDeleted,
+            "TimeDelete":'',
             "Remind": _selectedRemind,
             "Repeat": _selectedRepeat,
             "Completed": completed,

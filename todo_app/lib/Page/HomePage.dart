@@ -18,6 +18,7 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:todo_app/Service/notifications_service.dart';
+import 'package:share_plus/share_plus.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -522,6 +523,7 @@ class _HomePageState extends State<HomePage> {
                                                   snapshot.data!.docs[index].id,
                                                   false));
                                               return GestureDetector(
+                                                  onLongPress: () {},
                                                   onTap:
                                                       document['Completed'] ||
                                                               document[
@@ -654,6 +656,89 @@ class _HomePageState extends State<HomePage> {
                                                                   label:
                                                                       'Completed',
                                                                 ),
+                                                          SlidableAction(
+                                                            onPressed:
+                                                                (context) {
+                                                              String notesText =
+                                                                  '';
+                                                              for (int i = 0;
+                                                                  i <
+                                                                      snapshot
+                                                                          .data!
+                                                                          .docs
+                                                                          .length;
+                                                                  i++) {
+                                                                Map<String,
+                                                                    dynamic> document = snapshot
+                                                                        .data!
+                                                                        .docs[i]
+                                                                        .data()
+                                                                    as Map<
+                                                                        String,
+                                                                        dynamic>;
+
+                                                                String title = document[
+                                                                        'title'] ??
+                                                                    'Hey There';
+                                                                String
+                                                                    description =
+                                                                    document[
+                                                                            'description'] ??
+                                                                        '';
+                                                                String
+                                                                    timeStart =
+                                                                    document[
+                                                                            'TimeStart'] ??
+                                                                        '';
+                                                                String
+                                                                    timeFinish =
+                                                                    document[
+                                                                            'TimeFinish'] ??
+                                                                        '';
+                                                                String
+                                                                    AudioNotes =
+                                                                    document[
+                                                                            'AudioNotes'] ??
+                                                                        '';
+                                                                String
+                                                                    FileNotes =
+                                                                    document[
+                                                                            'FileNotes'] ??
+                                                                        '';
+                                                                String
+                                                                    DateFinish =
+                                                                    document[
+                                                                            'DateFinish'] ??
+                                                                        '';
+                                                                String repeat =
+                                                                    document[
+                                                                            'Repeat'] ??
+                                                                        '';
+                                                                String
+                                                                    category =
+                                                                    document[
+                                                                            'Category'] ??
+                                                                        '';
+                                                                
+                                                                notesText +=
+                                                                    'Name: $userName\n "Email:" $userEmail\n Title: ${title}\n Category: $category\n Description: $description\n TimeStart: $timeStart\n TimeFinish: $timeFinish\n DateFinish: $DateFinish\n AudioFiles: $AudioNotes\n ImageFiles: $FileNotes\n Repeat:$repeat\n\n';
+                                                              }
+                                                              Share.share(
+                                                                  'Here are my notes:\n\n$notesText',
+                                                                  subject:
+                                                                      'My Notes');
+                                                            },
+                                                            backgroundColor:
+                                                                Color.fromARGB(
+                                                                    255,
+                                                                    193,
+                                                                    23,
+                                                                    57),
+                                                            foregroundColor:
+                                                                Colors.white,
+                                                            icon: Icons.share,
+                                                            label: 'Share',
+                                                          ),
                                                           document['Protected']
                                                               ? SlidableAction(
                                                                   onPressed:
