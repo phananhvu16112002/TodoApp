@@ -2,19 +2,16 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:todo_app/Custom/MyInputFeild.dart';
 import 'package:todo_app/Page/HomePage.dart';
-import 'package:get/get.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_sound/flutter_sound.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
-import 'package:video_thumbnail/video_thumbnail.dart';
+import 'package:chewie/chewie.dart';
 
 class AddNewNote extends StatefulWidget {
   const AddNewNote({super.key});
@@ -49,15 +46,21 @@ class _AddNewNoteState extends State<AddNewNote> {
   bool isCheckVideo = false;
   PlatformFile? pickedImageFile;
   PlatformFile? pickedAudioFile;
+  PlatformFile? pickedVideoFile;
   UploadTask? uploadImageTask;
   UploadTask? uploadAudioTask;
+  UploadTask? uploadVideoTask;
+
   var fileNotes;
   var audioNotes;
+  var videoNotes;
   bool isPlaying = false;
   double duration = 0.0;
   double position = 0.0;
   FlutterSoundPlayer? _audioPlayer;
   AudioPlayer? _audioplayersPlayer;
+  VideoPlayerController? _videoPlayerController;
+  ChewieController? _chewieController;
 
   Future selectImagesFile() async {
     final results = await FilePicker.platform.pickFiles(type: FileType.image);
@@ -120,6 +123,44 @@ class _AddNewNoteState extends State<AddNewNote> {
     });
   }
 
+  Future selectVideoFile() async {
+    final results = await FilePicker.platform.pickFiles(type: FileType.video);
+    if (results == null) return;
+
+    setState(() {
+      isCheckVideo = true;
+      pickedVideoFile = results.files.first;
+    });
+    print(pickedVideoFile);
+  }
+
+  Future uploadVideoFile() async {
+    final path = 'videos/${pickedVideoFile!.name}';
+    final file = File(pickedVideoFile!.path!);
+
+    final ref = FirebaseStorage.instance.ref().child(path);
+    setState(() {
+      uploadVideoTask = ref.putFile(file);
+      _videoPlayerController = VideoPlayerController.file(file)..initialize();
+    });
+
+    final snapshot = await uploadVideoTask!.whenComplete(() {});
+    final urlDownload = await snapshot.ref.getDownloadURL();
+    final uri = Uri.parse(urlDownload);
+    final fileName = uri.pathSegments.last;
+    print('Download Link: $urlDownload');
+    setState(() {
+      videoNotes = urlDownload;
+      uploadVideoTask = null;
+    });
+
+    _chewieController = ChewieController(
+        videoPlayerController: _videoPlayerController!,
+        autoPlay: true,
+        allowFullScreen: false,
+        looping: true);
+  }
+
   void pauseAudio() async {
     await _audioPlayer!.pausePlayer();
     setState(() {
@@ -147,6 +188,8 @@ class _AddNewNoteState extends State<AddNewNote> {
   void dispose() {
     // TODO: implement dispose
     super.dispose();
+    _videoPlayerController!.dispose();
+    _chewieController!.dispose();
   }
 
   @override
@@ -259,8 +302,9 @@ class _AddNewNoteState extends State<AddNewNote> {
                             children: [
                               ElevatedButton(
                                   style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.amber),
-                                  child: const Text('Selected File'),
+                                      backgroundColor:
+                                          Color.fromARGB(255, 190, 59, 35)),
+                                  child: const Text('Selected Image'),
                                   onPressed: selectImagesFile),
                               SizedBox(width: 25),
                               ElevatedButton(
@@ -268,7 +312,7 @@ class _AddNewNoteState extends State<AddNewNote> {
                                       backgroundColor: isCheckImage
                                           ? Colors.green
                                           : Colors.grey),
-                                  child: const Text('Upload File'),
+                                  child: const Text('Upload Image'),
                                   onPressed:
                                       isCheckImage ? uploadImagesFile : () {}),
                             ],
@@ -289,7 +333,8 @@ class _AddNewNoteState extends State<AddNewNote> {
                             ListTile(
                               shape: RoundedRectangleBorder(
                                 side: BorderSide(
-                                    width: 2, color: Colors.amberAccent),
+                                    width: 2,
+                                    color: Color.fromARGB(255, 20, 148, 99)),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               leading: IconButton(
@@ -326,8 +371,9 @@ class _AddNewNoteState extends State<AddNewNote> {
                             children: [
                               ElevatedButton(
                                   style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.amber),
-                                  child: const Text('Selected File'),
+                                      backgroundColor:
+                                          Color.fromARGB(255, 40, 12, 154)),
+                                  child: const Text('Selected Audio'),
                                   onPressed: selectAudioFiles),
                               SizedBox(width: 25),
                               ElevatedButton(
@@ -335,7 +381,7 @@ class _AddNewNoteState extends State<AddNewNote> {
                                       backgroundColor: isCheckAudio
                                           ? Colors.green
                                           : Colors.grey),
-                                  child: const Text('Upload File'),
+                                  child: const Text('Upload Audio'),
                                   onPressed:
                                       isCheckAudio ? uploadAudioFile : () {}),
                             ],
@@ -343,6 +389,44 @@ class _AddNewNoteState extends State<AddNewNote> {
                         ],
                       ),
                       ////////////////////Pick Video/////////////////////////
+                      SizedBox(
+                        height: 25,
+                      ),
+                      label("Pick Video"),
+                      SizedBox(
+                        height: 2,
+                      ),
+
+                      const SizedBox(height: 12),
+                      Column(
+                        children: [
+                          _chewieController == null
+                              ? Container(
+                                  child: Text(
+                                  'Error',
+                                  style: TextStyle(color: Colors.white),
+                                ))
+                              : Chewie(controller: _chewieController!),
+                          Row(
+                            children: [
+                              ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.amber),
+                                  child: const Text('Selected Video'),
+                                  onPressed: selectVideoFile),
+                              SizedBox(width: 25),
+                              ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                      backgroundColor: isCheckVideo
+                                          ? Colors.green
+                                          : Colors.grey),
+                                  child: const Text('Upload Video'),
+                                  onPressed:
+                                      isCheckVideo ? uploadVideoFile : () {}),
+                            ],
+                          ),
+                        ],
+                      ),
 
                       SizedBox(
                         height: 25,
@@ -581,11 +665,12 @@ class _AddNewNoteState extends State<AddNewNote> {
             "decription": _noteDescriptionController.text,
             "FileNotes": fileNotes.toString(),
             "AudioNotes": audioNotes.toString(),
+            "VideoNotes": videoNotes.toString(),
             "DateFinish": _controllerDateTime.text,
             "TimeStart": _controllerTimeStart.text,
             "TimeFinish": _controllerTimeFinish.text,
             "isDeleted": isDeleted,
-            "TimeDelete":'',
+            "TimeDelete": '',
             "Remind": _selectedRemind,
             "Repeat": _selectedRepeat,
             "Completed": completed,

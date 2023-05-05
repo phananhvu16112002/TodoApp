@@ -1,16 +1,17 @@
 import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:file_picker/file_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:todo_app/Custom/MyInputFeild.dart';
 import 'package:todo_app/Page/HomePage.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_sound/flutter_sound.dart';
+import 'package:video_player/video_player.dart';
+import 'package:chewie/chewie.dart';
 
 class ViewNote extends StatefulWidget {
   ViewNote({super.key, required this.document, required this.id});
@@ -40,17 +41,23 @@ class _ViewNoteState extends State<ViewNote> {
   List<String> repeatList = ["None", "Daily"];
   PlatformFile? pickedFile;
   UploadTask? uploadTask;
+  UploadTask? uploadVideoTask;
   PlatformFile? pickedAudioFile;
   UploadTask? uploadAudioTask;
   bool isCheckAudio = false;
   bool isCheck = false;
   var fileNotes;
   var audioNotes;
+  var videoNotes;
   bool isPlaying = false;
   double duration = 0.0;
   double position = 0.0;
   FlutterSoundPlayer? _audioPlayer;
   AudioPlayer? _audioplayersPlayer;
+  VideoPlayerController? _videoPlayerController;
+  ChewieController? _chewieController;
+  PlatformFile? pickedVideoFile;
+  bool isCheckVideo = false;
 
   final storage = FirebaseStorage.instance;
   final AudioPlayer audioPlayer = AudioPlayer();
@@ -122,6 +129,44 @@ class _ViewNoteState extends State<ViewNote> {
     });
   }
 
+  Future selectVideoFile() async {
+    final results = await FilePicker.platform.pickFiles(type: FileType.video);
+    if (results == null) return;
+
+    setState(() {
+      isCheckVideo = true;
+      pickedVideoFile = results.files.first;
+    });
+    print(pickedVideoFile);
+  }
+
+  Future uploadVideoFile() async {
+    final path = 'videos/${pickedVideoFile!.name}';
+    final file = File(pickedVideoFile!.path!);
+
+    final ref = FirebaseStorage.instance.ref().child(path);
+    setState(() {
+      uploadVideoTask = ref.putFile(file);
+      _videoPlayerController = VideoPlayerController.file(file)..initialize();
+    });
+
+    final snapshot = await uploadVideoTask!.whenComplete(() {});
+    final urlDownload = await snapshot.ref.getDownloadURL();
+    final uri = Uri.parse(urlDownload);
+    final fileName = uri.pathSegments.last;
+    print('Download Link: $urlDownload');
+    setState(() {
+      videoNotes = urlDownload;
+      uploadVideoTask = null;
+    });
+
+    _chewieController = ChewieController(
+        videoPlayerController: _videoPlayerController!,
+        autoPlay: true,
+        allowFullScreen: false,
+        looping: true);
+  }
+
   void pauseAudio() async {
     await _audioPlayer!.pausePlayer();
     setState(() {
@@ -166,6 +211,12 @@ class _ViewNoteState extends State<ViewNote> {
     _selectedRepeat = widget.document['Repeat'];
     fileNotes = widget.document['FileNotes'];
     audioNotes = widget.document['AudioNotes'];
+    videoNotes = widget.document['VideoNotes'];
+    _videoPlayerController = VideoPlayerController.network("${videoNotes!}");
+    _chewieController = ChewieController(
+        videoPlayerController: _videoPlayerController!,
+        autoPlay: true,
+        looping: true);
   }
 
   @override
@@ -478,6 +529,43 @@ class _ViewNoteState extends State<ViewNote> {
                                 )
                               ],
                       ),
+                      SizedBox(
+                        height: 25,
+                      ),
+                      label("Pick Video"),
+                      SizedBox(
+                        height: 2,
+                      ),
+                      const SizedBox(height: 12),
+                      Column(
+                        children: edit
+                            ? [
+                                _chewieController == null
+                                    ? Container()
+                                    : Chewie(controller: _chewieController!),
+                                Row(
+                                  children: [
+                                    ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.amber),
+                                        child: const Text('Selected Video'),
+                                        onPressed: selectVideoFile),
+                                    SizedBox(width: 25),
+                                    ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                            backgroundColor: isCheckVideo
+                                                ? Colors.green
+                                                : Colors.grey),
+                                        child: const Text('Upload Video'),
+                                        onPressed: isCheckVideo
+                                            ? uploadVideoFile
+                                            : () {}),
+                                  ],
+                                ),
+                              ]
+                            : [Chewie(controller: _chewieController!)],
+                      ),
+                      SizedBox(height: 25,),
                       label("Category"),
                       SizedBox(
                         height: 12,
@@ -713,6 +801,7 @@ class _ViewNoteState extends State<ViewNote> {
           "TimeFinish": _controllerTimeFinish.text,
           "FileNotes": fileNotes.toString(),
           "AudioNotes": audioNotes.toString(),
+          "VideoNotes": videoNotes.toString(),
           "Remind": _selectedRemind,
           "Repeat": _selectedRepeat
         });
