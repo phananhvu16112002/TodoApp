@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:todo_app/Custom/AddLabel.dart';
 import 'package:todo_app/Page/AddNewNote.dart';
 import 'package:todo_app/Page/HomePage.dart';
 import 'package:todo_app/Page/PhonePageAuth.dart';
+import 'package:todo_app/Page/ProfilePage.dart';
 import 'package:todo_app/Page/SignInPage.dart';
 import 'package:todo_app/Page/SignUpPage.dart';
 import 'package:todo_app/Service/Auth_Service.dart';
@@ -50,7 +52,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: HomePage(),
+      home: AddLabel(),
       debugShowCheckedModeBanner: false,
     );
   }

@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:todo_app/Page/PhonePageAuth.dart';
@@ -20,7 +22,8 @@ class _SignInPageState extends State<SignInPage> {
   var _controllerPassword = TextEditingController();
   bool circular = false;
   AuthClass authClass = AuthClass();
-  
+  var userID;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -42,11 +45,13 @@ class _SignInPageState extends State<SignInPage> {
                     SizedBox(
                       height: 20,
                     ),
-                    buttonItem("assets/google.svg", "Continue with Google", 30,"Google"),
+                    buttonItem("assets/google.svg", "Continue with Google", 30,
+                        "Google"),
                     SizedBox(
                       height: 15,
                     ),
-                    buttonItem("assets/phone.svg", "Continue with Phone", 30,"Phone"),
+                    buttonItem(
+                        "assets/phone.svg", "Continue with Phone", 30, "Phone"),
                     SizedBox(
                       height: 15,
                     ),
@@ -101,12 +106,12 @@ class _SignInPageState extends State<SignInPage> {
                       height: 5,
                     ),
                     InkWell(
-                      onTap: (){
+                      onTap: () {
                         Navigator.pushAndRemoveUntil(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (builder) => ForgotPasswordPage()),
-                                  (route) => false);
+                            context,
+                            MaterialPageRoute(
+                                builder: (builder) => ForgotPasswordPage()),
+                            (route) => false);
                       },
                       child: Text("Forgot password ?",
                           style: TextStyle(
@@ -126,7 +131,8 @@ class _SignInPageState extends State<SignInPage> {
               await firebaseAuth.signInWithEmailAndPassword(
                   email: _controllerEmail.text,
                   password: _controllerPassword.text);
-          print(userCredential.user);
+
+
           ScaffoldMessenger.of(context)
               .showSnackBar(SnackBar(content: Text('Sign In Successfully')));
           setState(() {
@@ -137,8 +143,8 @@ class _SignInPageState extends State<SignInPage> {
               MaterialPageRoute(builder: (builder) => HomePage()),
               (route) => false);
         } catch (e) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text('Password is wrong. Please check!')));
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Password is wrong. Please check!')));
           setState(() {
             circular = false;
           });
@@ -166,18 +172,16 @@ class _SignInPageState extends State<SignInPage> {
     );
   }
 
-  Widget buttonItem(String imagePath, String buttonName, double size,String type) {
+  Widget buttonItem(
+      String imagePath, String buttonName, double size, String type) {
     return InkWell(
-      onTap: () async{
-        if(type == "Google")
-        {
+      onTap: () async {
+        if (type == "Google") {
           await authClass.googleSignIn(context);
-        }
-        else if (type == "Phone")
-        {
-          Navigator.push(context,MaterialPageRoute(builder: (builder) => PhonePageAuth()));
-        }
-        else{}
+        } else if (type == "Phone") {
+          Navigator.push(context,
+              MaterialPageRoute(builder: (builder) => PhonePageAuth()));
+        } else {}
       },
       child: Container(
           width: MediaQuery.of(context).size.width - 60,

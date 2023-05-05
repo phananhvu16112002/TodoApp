@@ -27,6 +27,7 @@ class AuthClass {
           UserCredential userCredential =
               await firebaseAuth.signInWithCredential(credential);
           storeTokenAndData(userCredential);
+          // 
           Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(builder: (builder) => HomePage()),

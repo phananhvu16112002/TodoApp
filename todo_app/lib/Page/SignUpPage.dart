@@ -132,12 +132,16 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   addUserDetails(String firstName, String lastName, String email,
-      String phoneNumber) async {
+      String phoneNumber, String userID) async {
     await FirebaseFirestore.instance.collection('users').add({
       'firstName': firstName,
       'lastName': lastName,
       'email': email,
       'phoneNumber': phoneNumber,
+      'sizeText': '',
+      'soundNotification': '',
+      'labels': [],
+      'userID': userID
     });
   }
 
@@ -161,12 +165,13 @@ class _SignUpPageState extends State<SignUpPage> {
               _controllerPassword.text = "";
               _controllerConfirmPassword.text = "";
             });
+            String userID = userCredential.user!.uid;
             addUserDetails(
-              _controllerFirstName.text.trim(),
-              _controllerLastName.text.trim(),
-              _controllerEmail.text.trim(),
-              _controllerPhoneNumber.text.trim(),
-            );
+                _controllerFirstName.text.trim(),
+                _controllerLastName.text.trim(),
+                _controllerEmail.text.trim(),
+                _controllerPhoneNumber.text.trim(),
+                userID);
 
             Navigator.pushAndRemoveUntil(
                 context,

@@ -61,8 +61,29 @@ class _AddNewNoteState extends State<AddNewNote> {
   AudioPlayer? _audioplayersPlayer;
   VideoPlayerController? _videoPlayerController;
   ChewieController? _chewieController;
+  List<String> _userLabels = [];
+  final colors = [0xFF9A2B3D, 0xFF27C27F, 0xFFDFB43C, 0xFF633997, 0xFFBA3286];
+
+  void _getUserLabels() async {
+    final userID = FirebaseAuth.instance.currentUser?.uid;
+    final userRef = FirebaseFirestore.instance
+        .collection('users')
+        .where('userID', isEqualTo: userID);
+
+    final userQuerySnapshot = await userRef.get();
+    final userDoc = userQuerySnapshot.docs[0];
+    final userLabels = userDoc.data()?['labels'];
+
+    setState(() {
+      _userLabels = List<String>.from(userLabels);
+    });
+  }
 
   Future selectImagesFile() async {
+    if (isCheckImage) {
+      return; // file picker is already open
+    }
+
     final results = await FilePicker.platform.pickFiles(type: FileType.image);
     if (results == null) return;
 
@@ -91,6 +112,9 @@ class _AddNewNoteState extends State<AddNewNote> {
   }
 
   Future selectAudioFiles() async {
+    if (isCheckAudio) {
+      return; // file picker is already open
+    }
     final results = await FilePicker.platform.pickFiles(type: FileType.audio);
     if (results == null) return;
 
@@ -124,6 +148,9 @@ class _AddNewNoteState extends State<AddNewNote> {
   }
 
   Future selectVideoFile() async {
+    if (isCheckVideo) {
+      return; // file picker is already open
+    }
     final results = await FilePicker.platform.pickFiles(type: FileType.video);
     if (results == null) return;
 
@@ -158,7 +185,7 @@ class _AddNewNoteState extends State<AddNewNote> {
         videoPlayerController: _videoPlayerController!,
         autoPlay: true,
         allowFullScreen: false,
-        looping: true);
+        looping: false);
   }
 
   void pauseAudio() async {
@@ -188,18 +215,23 @@ class _AddNewNoteState extends State<AddNewNote> {
   void dispose() {
     // TODO: implement dispose
     super.dispose();
-    _videoPlayerController!.dispose();
-    _chewieController!.dispose();
+    if (_videoPlayerController != null) {
+      _videoPlayerController!.dispose();
+    }
+
+    if (_chewieController != null) {
+      _chewieController!.dispose();
+    }
   }
 
   @override
   void initState() {
     super.initState();
+    _getUserLabels();
   }
 
   @override
   Widget build(BuildContext context) {
-    // print(pickedFile!.path!.toString());
     return Scaffold(
         body: Container(
             height: MediaQuery.of(context).size.height,
@@ -401,11 +433,7 @@ class _AddNewNoteState extends State<AddNewNote> {
                       Column(
                         children: [
                           _chewieController == null
-                              ? Container(
-                                  child: Text(
-                                  'Error',
-                                  style: TextStyle(color: Colors.white),
-                                ))
+                              ? Container()
                               : Chewie(controller: _chewieController!),
                           Row(
                             children: [
@@ -437,23 +465,15 @@ class _AddNewNoteState extends State<AddNewNote> {
                       ),
                       Wrap(
                         runSpacing: 10,
+                        spacing: 20,
                         children: [
+                          for (int i = 0; i < _userLabels.length; i++)
+                            categorySelect(
+                                _userLabels[i], colors[i % colors.length]),
                           categorySelect("Food", 0xFF575A4F),
-                          SizedBox(
-                            width: 20,
-                          ),
                           categorySelect("Work", 0xFF4283C4),
-                          SizedBox(
-                            width: 20,
-                          ),
                           categorySelect("WorkOut", 0xFFDFB43C),
-                          SizedBox(
-                            width: 20,
-                          ),
                           categorySelect("Design", 0xFF633997),
-                          SizedBox(
-                            width: 20,
-                          ),
                           categorySelect("Run", 0xFFBA3286),
                         ],
                       ),

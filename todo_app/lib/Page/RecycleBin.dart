@@ -45,7 +45,6 @@ class _HomePageState extends State<RecycleBin> {
   @override
   void dispose() {
     // TODO: implement dispose
-    PhonePageAuth();
     super.dispose();
   }
 

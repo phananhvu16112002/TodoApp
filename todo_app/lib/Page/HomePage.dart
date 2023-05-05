@@ -7,6 +7,7 @@ import 'package:todo_app/Custom/GridCard.dart';
 import 'package:todo_app/Custom/NoteCard.dart';
 import 'package:todo_app/Page/AddNewNote.dart';
 import 'package:todo_app/Page/PhonePageAuth.dart';
+import 'package:todo_app/Page/ProfilePage.dart';
 import 'package:todo_app/Page/RecycleBin.dart';
 import 'package:todo_app/Page/SignInPage.dart';
 import 'package:todo_app/Page/SignUpPage.dart';
@@ -44,6 +45,7 @@ class _HomePageState extends State<HomePage> {
   DateTime dateChoose = DateTime.now();
   late var _noteStream;
   var notifyHelper = NotificationsService();
+  int _selectedIndex = 0;
 
   @override
   void dispose() {
@@ -233,13 +235,9 @@ class _HomePageState extends State<HomePage> {
                   Row(
                     children: [
                       CircleAvatar(
-                        radius: 30,
-                        backgroundColor: Colors.white,
-                        child: Icon(
-                          Icons.person,
-                          color: Colors.black,
-                        ),
-                      ),
+                          radius: 30,
+                          backgroundColor: Colors.white,
+                          child: Image.asset('assets/avatar.jpg')),
                       SizedBox(
                         width: 20,
                       ),
@@ -327,41 +325,53 @@ class _HomePageState extends State<HomePage> {
                 color: Color.fromARGB(255, 209, 206, 206)),
           ],
         )),
-        bottomNavigationBar:
-            BottomNavigationBar(backgroundColor: Colors.black87, items: [
-          BottomNavigationBarItem(
-            icon: InkWell(
-                onTap: () {},
-                child: Icon(Icons.home, size: 32, color: Colors.white)),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-              icon: Container(
-                  height: 52,
-                  width: 52,
-                  decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                          colors: [Colors.indigoAccent, Colors.purple])),
-                  child: InkWell(
+        bottomNavigationBar: BottomNavigationBar(
+            currentIndex: _selectedIndex,
+            backgroundColor: Colors.black87,
+            onTap: (value) {
+              setState(() {
+                _selectedIndex = value;
+              });
+            },
+            items: [
+              BottomNavigationBarItem(
+                icon: InkWell(
+                    onTap: () {},
+                    child: Icon(Icons.home, size: 32, color: Colors.white)),
+                label: 'Home',
+              ),
+              BottomNavigationBarItem(
+                  icon: Container(
+                      height: 52,
+                      width: 52,
+                      decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                              colors: [Colors.indigoAccent, Colors.purple])),
+                      child: InkWell(
+                          onTap: () {
+                            Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (builder) => AddNewNote()));
+                          },
+                          child:
+                              Icon(Icons.add, size: 32, color: Colors.white))),
+                  label: 'Add Note'),
+              BottomNavigationBarItem(
+                  icon: InkWell(
                       onTap: () {
+                        // notifyHelper.displayNotification(
+                        //     title: "Theme Changed", body: "Go add");
                         Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (builder) => AddNewNote()));
+                                builder: (builder) => ProfilePage()));
                       },
-                      child: Icon(Icons.add, size: 32, color: Colors.white))),
-              label: 'Add Note'),
-          BottomNavigationBarItem(
-              icon: InkWell(
-                  onTap: () {
-                    notifyHelper.displayNotification(
-                        title: "Theme Changed", body: "Go add");
-                    // notifyHelper.scheduledNotification();
-                  },
-                  child: Icon(Icons.settings, size: 32, color: Colors.white)),
-              label: 'Settings'),
-        ]),
+                      child:
+                          Icon(Icons.settings, size: 32, color: Colors.white)),
+                  label: 'Settings'),
+            ]),
         body: _isSearching
             ? _buildNotesListView()
             : SafeArea(
@@ -488,7 +498,7 @@ class _HomePageState extends State<HomePage> {
                                                             .toString()
                                                             .split(":")[1]),
                                                         document);
-
+                                              
                                               switch (document['Category']) {
                                                 case "Work":
                                                   iconData =
@@ -706,6 +716,10 @@ class _HomePageState extends State<HomePage> {
                                                                             'FileNotes'] ??
                                                                         '';
                                                                 String
+                                                                    videoNotes =
+                                                                    document[
+                                                                        'VideoNotes'];
+                                                                String
                                                                     DateFinish =
                                                                     document[
                                                                             'DateFinish'] ??
@@ -721,7 +735,7 @@ class _HomePageState extends State<HomePage> {
                                                                         '';
 
                                                                 notesText +=
-                                                                    'Name: $userName\n "Email:" $userEmail\n Title: ${title}\n Category: $category\n Description: $description\n TimeStart: $timeStart\n TimeFinish: $timeFinish\n DateFinish: $DateFinish\n AudioFiles: $AudioNotes\n ImageFiles: $FileNotes\n Repeat:$repeat\n\n';
+                                                                    'Name: $userName\n "Email:" $userEmail\n Title: ${title}\n Category: $category\n Description: $description\n TimeStart: $timeStart\n TimeFinish: $timeFinish\n DateFinish: $DateFinish\n AudioFiles: $AudioNotes\n ImageFiles: $FileNotes\n VideoFiles: $videoNotes \n Repeat:$repeat\n\n';
                                                               }
                                                               Share.share(
                                                                   'Here are my notes:\n\n$notesText',
