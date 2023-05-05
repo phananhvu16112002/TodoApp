@@ -697,6 +697,7 @@ class _AddNewNoteState extends State<AddNewNote> {
             _controllerTimeStart.text.isEmpty ||
             fileNotes.toString().isEmpty ||
             audioNotes.toString().isEmpty ||
+            videoNotes.toString().isEmpty ||
             _controllerTimeFinish.text.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text("Please enter all your note ")));
@@ -705,7 +706,10 @@ class _AddNewNoteState extends State<AddNewNote> {
       child: _noteTitleController.text.isNotEmpty &&
               _noteDescriptionController.text.isNotEmpty &&
               _controllerTimeStart.text.isNotEmpty &&
-              _controllerTimeFinish.text.isNotEmpty
+              _controllerTimeFinish.text.isNotEmpty &&
+              fileNotes.toString().isNotEmpty &&
+              audioNotes.toString().isNotEmpty &&
+              videoNotes.toString().isNotEmpty
           ? Container(
               height: 56,
               width: MediaQuery.of(context).size.width,

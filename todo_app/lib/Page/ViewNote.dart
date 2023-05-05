@@ -547,7 +547,7 @@ class _ViewNoteState extends State<ViewNote> {
                                   children: [
                                     ElevatedButton(
                                         style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.amber),
+                                            backgroundColor: Color.fromARGB(255, 255, 7, 7)),
                                         child: const Text('Selected Video'),
                                         onPressed: selectVideoFile),
                                     SizedBox(width: 25),
@@ -565,7 +565,9 @@ class _ViewNoteState extends State<ViewNote> {
                               ]
                             : [Chewie(controller: _chewieController!)],
                       ),
-                      SizedBox(height: 25,),
+                      SizedBox(
+                        height: 25,
+                      ),
                       label("Category"),
                       SizedBox(
                         height: 12,
