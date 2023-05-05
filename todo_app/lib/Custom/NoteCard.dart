@@ -17,6 +17,7 @@ class NoteCard extends StatelessWidget {
     required this.protected,
     required this.description,
     required this.isDeleted,
+    required this.timeDelete,
   }) : super(key: key);
 
   final String title;
@@ -33,6 +34,7 @@ class NoteCard extends StatelessWidget {
   final String dateFinish;
   final String description;
   final bool isDeleted;
+  final String timeDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -122,9 +124,16 @@ class NoteCard extends StatelessWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.access_time_rounded,
-                                  size: 10, color: Colors.white),
-                              Text("$timeStart - $timeFinish",
+                              Icon(
+                                  isDeleted == true
+                                      ? Icons.auto_delete
+                                      : Icons.access_time_rounded,
+                                  size: 10,
+                                  color: Colors.white),
+                              Text(
+                                  isDeleted == true
+                                      ? "$timeDelete"
+                                      : "${timeStart} - ${timeFinish}",
                                   style: TextStyle(
                                     color:
                                         completed ? Colors.red : Colors.white,

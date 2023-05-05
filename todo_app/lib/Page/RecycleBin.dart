@@ -40,6 +40,7 @@ class _HomePageState extends State<RecycleBin> {
   DateTime _selectedDate = DateTime.now();
   DateTime dateChoose = DateTime.now();
   late var _noteStream;
+  var notifyHelper = NotificationsService();
 
   @override
   void dispose() {
@@ -72,7 +73,7 @@ class _HomePageState extends State<RecycleBin> {
     String? userEmail = FirebaseAuth.instance.currentUser?.email;
     String? userName = FirebaseAuth.instance.currentUser?.displayName;
     String? userPhone = FirebaseAuth.instance.currentUser?.phoneNumber;
-    TimeOfDay _selectedTime = TimeOfDay(hour: 0, minute: 0);
+    TextEditingController _timeDeleteController = TextEditingController();
 
     bool completed = false;
     List<Map<String, dynamic>> pinnedNotes = [];
@@ -327,10 +328,12 @@ class _HomePageState extends State<RecycleBin> {
               for (int i = 0; i < docs.length; i++) {
                 var temp =
                     snapshot.data!.docs[i].data() as Map<String, dynamic>;
+                String id = snapshot.data!.docs[i].id;
                 if (temp['isDeleted'] == true) {
                   count++;
                 }
               }
+
               return Column(
                 children: [
                   SizedBox(
@@ -416,6 +419,34 @@ class _HomePageState extends State<RecycleBin> {
                                         snapshot.data!.docs[index].data()
                                             as Map<String, dynamic>;
                                     String id = snapshot.data!.docs[index].id;
+                                    bool check = false;
+                                    for (int i = 0;
+                                        i < snapshot.data!.docs.length;
+                                        i++) {
+                                      var id = snapshot.data!.docs[i].id;
+                                      var temp = snapshot.data!.docs[i].data()
+                                          as Map<String, dynamic>;
+                                      try {
+                                        var minute = int.parse(
+                                            temp['TimeDelete']
+                                                .toString()
+                                                .split(":")[1]
+                                                .split(" ")[0]);
+                                        var hour = int.parse(temp['TimeDelete']
+                                            .toString()
+                                            .split(":")[0]);
+                                        if (TimeOfDay.now().hour == hour &&
+                                            TimeOfDay.now().minute == minute) {
+                                          FirebaseFirestore.instance
+                                              .collection("NoteTask")
+                                              .doc(id)
+                                              .delete();
+                                          setState(() {});
+                                        }
+                                      } catch (e) {
+                                        print(e);
+                                      }
+                                    }
                                     switch (document['Category']) {
                                       case "Work":
                                         iconData = Icons.run_circle_outlined;
@@ -579,45 +610,8 @@ class _HomePageState extends State<RecycleBin> {
                                                   label: 'Recycle',
                                                 ),
                                                 SlidableAction(
-                                                  onPressed: (context) {
-                                                    showTimePicker(
-                                                            context: context,
-                                                            initialTime: TimeOfDay(
-                                                                hour: int.parse(
-                                                                    _timeDelete.split(
-                                                                            ":")[
-                                                                        0]),
-                                                                minute: int.parse(
-                                                                    _timeDelete
-                                                                        .split(":")[
-                                                                            1]
-                                                                        .split(
-                                                                            " ")[0])))
-                                                        .then((value) {
-                                                      if (value != null) {
-                                                        setState(() {
-                                                          _selectedTime =
-                                                              TimeOfDay(
-                                                                  hour: value
-                                                                      .hour,
-                                                                  minute: value
-                                                                      .minute);
-                                                        });
-                                                        String id = snapshot
-                                                            .data!
-                                                            .docs[index]
-                                                            .id;
-                                                        FirebaseFirestore
-                                                            .instance
-                                                            .collection(
-                                                                "NoteTask")
-                                                            .doc(id)
-                                                            .update({
-                                                          'TimeDelete':
-                                                              '${_selectedTime.hour}:${_selectedTime.minute}'
-                                                        });
-                                                      }
-                                                    });
+                                                  onPressed: (context) async {
+                                                    _showTimePicker(id);
                                                   },
                                                   backgroundColor:
                                                       Color.fromARGB(
@@ -654,6 +648,8 @@ class _HomePageState extends State<RecycleBin> {
                                                       document['decription'],
                                                   isDeleted:
                                                       document['isDeleted'],
+                                                  timeDelete:
+                                                      document['TimeDelete'],
                                                 )
                                               : Container(),
                                         ));
@@ -882,6 +878,26 @@ class _HomePageState extends State<RecycleBin> {
     setState(() {
       selected[index].checkValue = !selected[index].checkValue;
     });
+  }
+
+  void _showTimePicker(var id) async {
+    var value = await showTimePicker(
+        initialEntryMode: TimePickerEntryMode.input,
+        context: context,
+        initialTime: TimeOfDay(
+            hour: int.parse(_timeDelete.split(":")[0]),
+            minute: int.parse(_timeDelete.split(":")[1].split(" ")[0])));
+    if (value != null) {
+      _controllerTimeDelete.text = value.format(context);
+      FirebaseFirestore.instance
+          .collection("NoteTask")
+          .doc(id)
+          .update({"TimeDelete": _controllerTimeDelete.text});
+      Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (builder) => RecycleBin()),
+          (route) => false);
+    }
   }
 }
 

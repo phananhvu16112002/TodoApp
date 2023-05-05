@@ -70,6 +70,24 @@ class NotificationsService {
         payload: "${title}|" + "${description}|");
   }
 
+  scheduledDeleteNotification(int hour, int minutes) async {
+    print("Test Delete ScheduleNotification");
+    await flutterLocalNotificationsPlugin.zonedSchedule(
+      0,
+      "Auto Delete Completely",
+      "",
+      _convertTime(hour, minutes),
+      //  tz.TZDateTime.now(tz.local).add(const Duration(seconds: 5)),
+      const NotificationDetails(
+          android: AndroidNotificationDetails(
+              'your channel id', 'your channel name')),
+      androidAllowWhileIdle: true,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
+  }
+
   Future<void> _configureLocalTimeZone() async {
     tz.initializeTimeZones();
     final String timeZone = await FlutterNativeTimezone.getLocalTimezone();

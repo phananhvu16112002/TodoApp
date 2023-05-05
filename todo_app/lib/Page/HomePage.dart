@@ -719,7 +719,7 @@ class _HomePageState extends State<HomePage> {
                                                                     document[
                                                                             'Category'] ??
                                                                         '';
-                                                                
+
                                                                 notesText +=
                                                                     'Name: $userName\n "Email:" $userEmail\n Title: ${title}\n Category: $category\n Description: $description\n TimeStart: $timeStart\n TimeFinish: $timeFinish\n DateFinish: $DateFinish\n AudioFiles: $AudioNotes\n ImageFiles: $FileNotes\n Repeat:$repeat\n\n';
                                                               }
@@ -926,6 +926,8 @@ class _HomePageState extends State<HomePage> {
                                                                 'decription'],
                                                             isDeleted: document[
                                                                 'isDeleted'],
+                                                            timeDelete: document[
+                                                                'TimeDelete'],
                                                           )
                                                         : Container(),
                                                   ));
