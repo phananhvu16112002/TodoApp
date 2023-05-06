@@ -22,7 +22,6 @@ import 'package:todo_app/Service/notifications_service.dart';
 
 import 'package:share_plus/share_plus.dart';
 
-
 class HomePage extends StatefulWidget {
   final bool skipped;
   const HomePage({super.key, this.skipped = false});
@@ -50,7 +49,8 @@ class _HomePageState extends State<HomePage> {
   var notifyHelper = NotificationsService();
   int _selectedIndex = 0;
   String? selectedCategory;
-
+  int index = 0;
+  bool _isPinned = false;
 
   @override
   void dispose() {
@@ -105,11 +105,11 @@ class _HomePageState extends State<HomePage> {
         .snapshots();
 
     return Scaffold(
-        floatingActionButton:  FloatingActionButton(
-            onPressed:  () {
+        floatingActionButton: FloatingActionButton(
+            onPressed: () {
               Navigator.push(context,
                   MaterialPageRoute(builder: (builder) => AddNewNote()));
-            } ,
+            },
             child: Container(
                 height: 55,
                 width: 55,
@@ -143,7 +143,11 @@ class _HomePageState extends State<HomePage> {
                       fontWeight: FontWeight.bold,
                       color: Colors.white)),
           // actions: _buildAppBarActions(),
-          actions: [IconButton(onPressed: () => _showCategoryFilterDialog(), icon: Icon(Icons.filter_list))],
+          actions: [
+            IconButton(
+                onPressed: () => _showCategoryFilterDialog(),
+                icon: Icon(Icons.filter_list))
+          ],
           bottom: PreferredSize(
             child: Align(
               alignment: Alignment.centerLeft,
@@ -376,11 +380,11 @@ class _HomePageState extends State<HomePage> {
               BottomNavigationBarItem(
                   icon: InkWell(
                       onTap: () {
-                        notifyHelper.displayNotification(title: 'title', body: 'body');
+                        notifyHelper.displayNotification(
+                            title: 'title', body: 'body');
                         // notifyHelper.displayNotification(
                         //     title: "Theme Changed", body: "Go add");
                         Navigator.push(
-                          
                             context,
                             MaterialPageRoute(
                                 builder: (builder) => ProfilePage()));
@@ -551,7 +555,14 @@ class _HomePageState extends State<HomePage> {
                                                   snapshot.data!.docs[index].id,
                                                   false));
                                               return GestureDetector(
-                                                  onLongPress: () {},
+                                                  onLongPress: () {
+                                                    setState(() {
+                                                      _isPinned = !_isPinned;
+                                                      document['Pinned'] =
+                                                          _isPinned; // lưu trạng thái ghim vào firestore
+                                                      // nếu cần, cập nhật trạng thái ghim trong danh sách của app
+                                                    });
+                                                  },
                                                   onTap:
                                                       document['Completed'] ||
                                                               document[
@@ -1676,22 +1687,20 @@ class _HomePageState extends State<HomePage> {
         _noteList = _allNotes;
       });
     } else {
-      _noteStream = FirebaseFirestore.instance
+      FirebaseFirestore.instance
           .collection('NoteTask')
-          .where('title', isGreaterThanOrEqualTo: query)
-          .where('title', isLessThan: query + 'z')
-          .snapshots();
-
-      _noteStream.listen((QuerySnapshot snapshot) {
-        _noteList =
-            snapshot.docs.map((e) => e.data() as Map<String, dynamic>).toList();
-        results = _noteList;
-      });
-
-      setState(() {
-        _noteList = results;
-        _isSearching = true;
-      });
+          .orderBy('title')
+          .startAt([query])
+          .endAt([query + '\uf8ff'])
+          .get()
+          .then((QuerySnapshot snapshot) {
+            setState(() {
+              _noteList = snapshot.docs
+                  .map((e) => e.data() as Map<String, dynamic>)
+                  .toList();
+              _isSearching = true;
+            });
+          });
     }
   }
 
@@ -1725,17 +1734,23 @@ class _HomePageState extends State<HomePage> {
               style: TextStyle(color: Colors.white),
             ),
             onTap: () {
+              setState(() {
+                _selectedIndex = index;
+              });
               Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => ViewNote(
-                            document: noteData,
-                            id: index.toString(),
-                          )));
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ViewNote(
+                    document: noteData,
+                    id: index.toString(),
+                  ),
+                ),
+              );
             },
           ),
         );
       },
+      controller: ScrollController(initialScrollOffset: _selectedIndex * 80.0),
     );
   }
 }
