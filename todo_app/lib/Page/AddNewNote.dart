@@ -14,7 +14,10 @@ import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 
 class AddNewNote extends StatefulWidget {
-  const AddNewNote({super.key});
+  final int count = 0;
+  const AddNewNote({
+    super.key,
+  });
 
   @override
   State<AddNewNote> createState() => _AddNewNoteState();
@@ -63,6 +66,7 @@ class _AddNewNoteState extends State<AddNewNote> {
   ChewieController? _chewieController;
   List<String> _userLabels = [];
   final colors = [0xFF9A2B3D, 0xFF27C27F, 0xFFDFB43C, 0xFF633997, 0xFFBA3286];
+  int count = 0;
 
   void _getUserLabels() async {
     final userID = FirebaseAuth.instance.currentUser?.uid;
@@ -71,12 +75,19 @@ class _AddNewNoteState extends State<AddNewNote> {
         .where('userID', isEqualTo: userID);
 
     final userQuerySnapshot = await userRef.get();
-    final userDoc = userQuerySnapshot.docs[0];
-    final userLabels = userDoc.data()?['labels'];
+    if (userQuerySnapshot.docs.isNotEmpty) {
+      final userDoc = userQuerySnapshot.docs[0];
+      final userLabels = userDoc.data()?['labels'];
 
-    setState(() {
-      _userLabels = List<String>.from(userLabels);
-    });
+      setState(() {
+        _userLabels = List<String>.from(userLabels);
+      });
+    } else {
+      // Handle the case where the query returns no documents
+      setState(() {
+        _userLabels = [];
+      });
+    }
   }
 
   Future selectImagesFile() async {
@@ -712,6 +723,7 @@ class _AddNewNoteState extends State<AddNewNote> {
               context, MaterialPageRoute(builder: (builder) => HomePage()));
           ScaffoldMessenger.of(context)
               .showSnackBar(SnackBar(content: Text("Add Note Successfully")));
+          count++;
         } else if (_noteTitleController.text.isEmpty ||
             _noteDescriptionController.text.isEmpty ||
             _controllerTimeStart.text.isEmpty ||

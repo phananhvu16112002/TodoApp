@@ -6,6 +6,7 @@ import 'package:todo_app/Page/AddNewNote.dart';
 import 'package:todo_app/Page/HomePage.dart';
 import 'package:todo_app/Page/PhonePageAuth.dart';
 import 'package:todo_app/Page/ProfilePage.dart';
+import 'package:todo_app/Page/RecycleBin.dart';
 import 'package:todo_app/Page/SignInPage.dart';
 import 'package:todo_app/Page/SignUpPage.dart';
 import 'package:todo_app/Service/Auth_Service.dart';
@@ -52,7 +53,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: AddLabel(),
+      home: SignUpPage(),
       debugShowCheckedModeBanner: false,
     );
   }

@@ -13,7 +13,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({Key? key}) : super(key: key);
+  final bool skipped;
+  const ProfilePage({Key? key, this.skipped = false}) : super(key: key);
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();

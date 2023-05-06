@@ -8,7 +8,6 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import '../Service/Auth_Service.dart';
 import 'HomePage.dart';
 import 'package:phone_number/phone_number.dart';
-// import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -41,16 +40,23 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             child: Container(
                 height: MediaQuery.of(context).size.height,
                 width: MediaQuery.of(context).size.width,
-                color: Colors.black,
+                color: Color(0xFFDCBBAA),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      'Forgot Password',
-                      style: TextStyle(
-                          fontSize: 35,
-                          color: Color.fromARGB(255, 255, 255, 255),
-                          fontWeight: FontWeight.bold),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Forgot Password',
+                          style: TextStyle(
+                              fontSize: 25,
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold),
+                        ),
+                        SizedBox(width: 10,),
+                         Image.asset('assets/forgot.jpg', width: 120, height: 120),
+                      ],
                     ),
                     SizedBox(
                       height: 20,
@@ -66,11 +72,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                       height: 15,
                     ),
                     Text('Reset your password',
-                        style: TextStyle(fontSize: 17, color: Colors.white)),
+                        style: TextStyle(fontSize: 17, color: Colors.black)),
                     SizedBox(
                       height: 15,
                     ),
-                    textItem("Email or Phone", _controller, false,
+                    textItem("Enter your Email ", _controller, false,
                         TextInputType.emailAddress),
                     SizedBox(
                       height: 15,
@@ -87,7 +93,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                       children: [
                         Text(
                           "If you don't have an account ?",
-                          style: TextStyle(color: Colors.white, fontSize: 18),
+                          style: TextStyle(color: Colors.black, fontSize: 18),
                         ),
                         SizedBox(
                           width: 3,
@@ -102,7 +108,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                             },
                             child: Text("Register",
                                 style: TextStyle(
-                                    color: Colors.white,
+                                    color: Colors.black,
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold)))
                       ],
@@ -120,7 +126,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                       },
                       child: Text("Login",
                           style: TextStyle(
-                              color: Colors.white,
+                              color: Colors.black,
                               fontSize: 18,
                               fontWeight: FontWeight.bold)),
                     )
@@ -139,15 +145,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                   content: Text(
                       'Sent Link Reset Your Password in Email! Please check your email')));
-            }
-            if (validatePhoneNumber(_controller.text)) {
-              authClass.resetPassword(_controller.text.trim());
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content:
-                      Text('Please check your phone! OTP had been sent ')));
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Please check your phone number!')));
             }
           } else {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -247,12 +244,12 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   }
                 },
                 keyboardType: inputType,
-                style: TextStyle(fontSize: 17, color: Colors.white),
+                style: TextStyle(fontSize: 17, color: Colors.black),
                 controller: controller,
                 obscureText: obscureText,
                 decoration: InputDecoration(
                     labelText: name,
-                    labelStyle: TextStyle(fontSize: 17, color: Colors.white),
+                    labelStyle: TextStyle(fontSize: 17, color: Colors.black),
                     focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(15),
                         borderSide: BorderSide(

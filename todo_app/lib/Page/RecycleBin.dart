@@ -8,6 +8,7 @@ import 'package:todo_app/Custom/NoteCard.dart';
 import 'package:todo_app/Page/AddNewNote.dart';
 import 'package:todo_app/Page/HomePage.dart';
 import 'package:todo_app/Page/PhonePageAuth.dart';
+import 'package:todo_app/Page/ProfilePage.dart';
 import 'package:todo_app/Page/RecycleBin.dart';
 import 'package:todo_app/Page/SignInPage.dart';
 import 'package:todo_app/Page/SignUpPage.dart';
@@ -305,7 +306,9 @@ class _HomePageState extends State<RecycleBin> {
               label: 'Add Note'),
           BottomNavigationBarItem(
               icon: InkWell(
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (builder) => ProfilePage()));
+                  },
                   child: Icon(Icons.settings, size: 32, color: Colors.white)),
               label: 'Settings'),
         ]),
@@ -380,7 +383,7 @@ class _HomePageState extends State<RecycleBin> {
                                   child: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Image.asset('assets/note.jpg',
+                                      Image.asset('assets/recyclebin.jpg',
                                           width: 150, height: 150),
                                       Text('No Notes Delete',
                                           style: TextStyle(

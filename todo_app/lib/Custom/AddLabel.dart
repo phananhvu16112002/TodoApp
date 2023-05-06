@@ -43,7 +43,7 @@ class _AddLabelState extends State<AddLabel> {
         .collection('users')
         .where('userID', isEqualTo: userID);
 
-    if (_labels.length < 3 && _labelController.text.isNotEmpty) {
+    if (_labels.length < 5 && _labelController.text.isNotEmpty) {
       setState(() {
         _labels.add(_labelController.text);
       });

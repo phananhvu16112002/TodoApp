@@ -21,8 +21,10 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:todo_app/Service/notifications_service.dart';
 import 'package:share_plus/share_plus.dart';
 
+
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final bool skipped;
+  const HomePage({super.key, this.skipped = false});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -46,11 +48,12 @@ class _HomePageState extends State<HomePage> {
   late var _noteStream;
   var notifyHelper = NotificationsService();
   int _selectedIndex = 0;
+  String? selectedCategory;
+
 
   @override
   void dispose() {
     // TODO: implement dispose
-    PhonePageAuth();
     super.dispose();
   }
 
@@ -82,6 +85,16 @@ class _HomePageState extends State<HomePage> {
     String? userEmail = FirebaseAuth.instance.currentUser?.email;
     String? userName = FirebaseAuth.instance.currentUser?.displayName;
     String? userPhone = FirebaseAuth.instance.currentUser?.phoneNumber;
+    final List<String> categories = [
+      "Work",
+      "WorkOut",
+      "Food",
+      "Design",
+      "Run"
+    ];
+    late String
+        selectedCategory; // add this variable to the top of your widget tree
+    selectedCategory = categories[0]; //
 
     bool completed = false;
     List<Map<String, dynamic>> pinnedNotes = [];
@@ -91,11 +104,11 @@ class _HomePageState extends State<HomePage> {
         .snapshots();
 
     return Scaffold(
-        floatingActionButton: FloatingActionButton(
-            onPressed: () {
+        floatingActionButton:  FloatingActionButton(
+            onPressed:  () {
               Navigator.push(context,
                   MaterialPageRoute(builder: (builder) => AddNewNote()));
-            },
+            } ,
             child: Container(
                 height: 55,
                 width: 55,
@@ -128,7 +141,8 @@ class _HomePageState extends State<HomePage> {
                       fontSize: 34,
                       fontWeight: FontWeight.bold,
                       color: Colors.white)),
-          actions: _buildAppBarActions(),
+          // actions: _buildAppBarActions(),
+          actions: [IconButton(onPressed: () => _showCategoryFilterDialog(), icon: Icon(Icons.filter_list))],
           bottom: PreferredSize(
             child: Align(
               alignment: Alignment.centerLeft,
@@ -389,6 +403,7 @@ class _HomePageState extends State<HomePage> {
                     }
                     final docs = snapshot.data!.docs;
                     var count = 0;
+                    List<QueryDocumentSnapshot> filteredDocs = [];
                     for (int i = 0; i < docs.length; i++) {
                       var temp =
                           snapshot.data!.docs[i].data() as Map<String, dynamic>;
@@ -498,7 +513,7 @@ class _HomePageState extends State<HomePage> {
                                                             .toString()
                                                             .split(":")[1]),
                                                         document);
-                                              
+
                                               switch (document['Category']) {
                                                 case "Work":
                                                   iconData =
@@ -507,11 +522,11 @@ class _HomePageState extends State<HomePage> {
                                                   break;
                                                 case "WorkOut":
                                                   iconData = Icons.alarm;
-                                                  iconColor = Colors.teal;
+                                                  iconColor = Colors.purple;
                                                   break;
                                                 case "Food":
                                                   iconData = Icons.food_bank;
-                                                  iconColor = Colors.green;
+                                                  iconColor = Colors.pink;
                                                   break;
                                                 case "Design":
                                                   iconData = Icons
@@ -1522,17 +1537,107 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  List<Widget> _buildAppBarActions() {
-    if (_isSearching) {
-      return [];
-    } else {
-      return [
-        IconButton(
-            onPressed: () {},
-            icon: Icon(Icons.sort, size: 32, color: Colors.white))
-      ];
+  void _showCategoryFilterDialog() async {
+    String? selectedCategoryResult = await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("Filter by Category"),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                GestureDetector(
+                  child: Text("All"),
+                  onTap: () {
+                    Navigator.of(context).pop("All");
+                  },
+                ),
+                SizedBox(height: 8),
+                GestureDetector(
+                  child: Text("Work"),
+                  onTap: () {
+                    Navigator.of(context).pop("Work");
+                  },
+                ),
+                SizedBox(height: 8),
+                GestureDetector(
+                  child: Text("WorkOut"),
+                  onTap: () {
+                    Navigator.of(context).pop("WorkOut");
+                  },
+                ),
+                SizedBox(height: 8),
+                GestureDetector(
+                  child: Text("Food"),
+                  onTap: () {
+                    Navigator.of(context).pop("Food");
+                  },
+                ),
+                SizedBox(height: 8),
+                GestureDetector(
+                  child: Text("Design"),
+                  onTap: () {
+                    Navigator.of(context).pop("Design");
+                  },
+                ),
+                SizedBox(height: 8),
+                GestureDetector(
+                  child: Text("Run"),
+                  onTap: () {
+                    Navigator.of(context).pop("Run");
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (selectedCategoryResult != null) {
+      setState(() {
+        selectedCategory = selectedCategoryResult;
+      });
     }
   }
+
+  // List<Widget> _buildAppBarActions() {
+  //   if (_isSearching) {
+  //     return [];
+  //   } else {
+  //     return [
+  //       PopupMenuButton<String>(
+  //         onSelected: (category) {},
+  //         itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+  //           PopupMenuItem<String>(
+  //             value: 'All',
+  //             child: Text('All'),
+  //           ),
+  //           PopupMenuItem<String>(
+  //             value: 'Work',
+  //             child: Text('Work'),
+  //           ),
+  //           PopupMenuItem<String>(
+  //             value: 'WorkOut',
+  //             child: Text('WorkOut'),
+  //           ),
+  //           PopupMenuItem<String>(
+  //             value: 'Food',
+  //             child: Text('Food'),
+  //           ),
+  //           PopupMenuItem<String>(
+  //             value: 'Design',
+  //             child: Text('Design'),
+  //           ),
+  //           PopupMenuItem<String>(
+  //             value: 'Run',
+  //             child: Text('Run'),
+  //           ),
+  //         ],
+  //       ),
+  //     ];
+  //   }
+  // }
 
   getUserData() async {
     var userID = FirebaseAuth.instance.currentUser?.uid;
@@ -1549,6 +1654,15 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       selected[index].checkValue = !selected[index].checkValue;
     });
+  }
+
+  void _onPressedComplete(String noteId) {
+    FirebaseFirestore.instance
+        .collection("NoteTask")
+        .doc(noteId)
+        .update({'Completed': true})
+        .then((value) => print("Note Updated"))
+        .catchError((error) => print("Failed to update note: $error"));
   }
 
   void _searchNotes(String query) {

@@ -27,7 +27,7 @@ class AuthClass {
           UserCredential userCredential =
               await firebaseAuth.signInWithCredential(credential);
           storeTokenAndData(userCredential);
-          // 
+          //
           Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(builder: (builder) => HomePage()),
@@ -71,29 +71,41 @@ class AuthClass {
       String phoneNumber, BuildContext context, Function setData) async {
     PhoneVerificationCompleted verificationCompleted =
         (PhoneAuthCredential phoneAuthCredential) async {
-      showSnackBar(context, "Verification compledted");
+      if (context != null) {
+        showSnackBar(context, "Verification completed");
+      }
     };
     PhoneVerificationFailed verificationFailed =
         (FirebaseAuthException exception) {
-      showSnackBar(context, exception.toString());
+      if (context != null) {
+        showSnackBar(context, exception.toString());
+      }
     };
     PhoneCodeSent codeSent = (verificationId, [forceResendingToken]) {
-      showSnackBar(context, "verification code sent on the phone number");
+      if (context != null) {
+        showSnackBar(context, "Verification code sent on the phone number");
+      }
       setData(verificationId);
     };
-    PhoneCodeAutoRetrievalTimeout codeAutoRetrievalTimeout = (verificationId) {
-      showSnackBar(context, "Time Out");
+    PhoneCodeAutoRetrievalTimeout codeAutoRetrievalTimeout =
+        (String verificationId) {
+      if (context != null) {
+        showSnackBar(context, "Time Out");
+      }
     };
 
     try {
       await firebaseAuth.verifyPhoneNumber(
-          phoneNumber: phoneNumber,
-          verificationCompleted: verificationCompleted,
-          verificationFailed: verificationFailed,
-          codeSent: codeSent,
-          codeAutoRetrievalTimeout: codeAutoRetrievalTimeout);
+        phoneNumber: phoneNumber,
+        verificationCompleted: verificationCompleted,
+        verificationFailed: verificationFailed,
+        codeSent: codeSent,
+        codeAutoRetrievalTimeout: codeAutoRetrievalTimeout,
+      );
     } catch (e) {
-      showSnackBar(context, e.toString());
+      if (context != null) {
+        showSnackBar(context, e.toString());
+      }
     }
   }
 

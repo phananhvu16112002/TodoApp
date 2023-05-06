@@ -32,20 +32,20 @@ class _SignUpPageState extends State<SignUpPage> {
             child: Container(
                 height: MediaQuery.of(context).size.height,
                 width: MediaQuery.of(context).size.width,
-                color: Colors.black,
+                color: Color(0xFFDCBBAA),
                 child: SingleChildScrollView(
                   scrollDirection: Axis.vertical,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       SizedBox(
-                        height: 10,
+                        height: 30,
                       ),
                       Text(
                         'Sign Up',
                         style: TextStyle(
-                            fontSize: 35,
-                            color: Color.fromARGB(255, 255, 255, 255),
+                            fontSize: 30,
+                            color: Colors.black,
                             fontWeight: FontWeight.bold),
                       ),
                       SizedBox(
@@ -62,7 +62,7 @@ class _SignUpPageState extends State<SignUpPage> {
                         height: 15,
                       ),
                       Text('Or',
-                          style: TextStyle(fontSize: 17, color: Colors.white)),
+                          style: TextStyle(fontSize: 17, color: Colors.black)),
                       SizedBox(
                         height: 15,
                       ),
@@ -105,7 +105,7 @@ class _SignUpPageState extends State<SignUpPage> {
                         children: [
                           Text(
                             "If you already have an account ?",
-                            style: TextStyle(color: Colors.white, fontSize: 18),
+                            style: TextStyle(color: Colors.black, fontSize: 18),
                           ),
                           SizedBox(
                             width: 3,
@@ -120,7 +120,7 @@ class _SignUpPageState extends State<SignUpPage> {
                             },
                             child: Text("Login",
                                 style: TextStyle(
-                                    color: Colors.white,
+                                    color: Colors.black,
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold)),
                           )
@@ -259,7 +259,7 @@ class _SignUpPageState extends State<SignUpPage> {
         height: 60,
         child: TextFormField(
           keyboardType: inputType,
-          style: TextStyle(fontSize: 17, color: Colors.white),
+          style: TextStyle(fontSize: 17, color: Colors.black),
           controller: controller,
           obscureText: obscureText,
           validator: (value) {
@@ -270,7 +270,7 @@ class _SignUpPageState extends State<SignUpPage> {
           },
           decoration: InputDecoration(
               labelText: name,
-              labelStyle: TextStyle(fontSize: 17, color: Colors.white),
+              labelStyle: TextStyle(fontSize: 17, color: Colors.black),
               focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(15),
                   borderSide: BorderSide(

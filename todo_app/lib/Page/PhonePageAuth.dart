@@ -11,7 +11,7 @@ import 'package:todo_app/Page/HomePage.dart';
 import '../Service/Auth_Service.dart';
 
 class PhonePageAuth extends StatefulWidget {
-   const PhonePageAuth({Key? key}) : super(key: key);
+  const PhonePageAuth({Key? key}) : super(key: key);
 
   @override
   State<PhonePageAuth> createState() => _PhonePageAuthState();
@@ -26,21 +26,23 @@ class _PhonePageAuthState extends State<PhonePageAuth> {
   String verificationIDFinal = "";
   String smsCode = "";
   Timer? timer;
+  bool skipped = false;
 
   @override
   void dispose() {
     // TODO: implement dispose
-    phoneController.dispose();
     timer?.cancel();
+    phoneController.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
         backgroundColor: Colors.black87,
         appBar: AppBar(
           backgroundColor: Colors.black87,
-          title: Text("Sign Up",
+          title: Text("Phone Auth",
               style: TextStyle(color: Colors.white, fontSize: 24)),
           centerTitle: true,
         ),
@@ -123,8 +125,11 @@ class _PhonePageAuthState extends State<PhonePageAuth> {
                 ),
                 InkWell(
                   onTap: () {
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (builder) => HomePage()));
+                    Navigator.pushReplacement(context,
+                        MaterialPageRoute(builder: (builder) => HomePage(skipped: true)));
+                    setState(() {
+                      skipped = true;
+                    });
                   },
                   child: Container(
                       width: MediaQuery.of(context).size.width - 60,
@@ -156,15 +161,16 @@ class _PhonePageAuthState extends State<PhonePageAuth> {
             ))));
   }
 
-  void StartTimer() {
-    const onsec = Duration(seconds: 1);
-     timer = Timer.periodic(onsec, (timer) {
+  void startTimer() {
+    const oneSecond = Duration(seconds: 1);
+    timer = Timer.periodic(oneSecond, (Timer timer) {
       if (start == 0) {
         setState(() {
           timer.cancel();
           wait = false;
         });
-      } else {
+      } else if (mounted) {
+        // Add a check for the mounted property
         setState(() {
           start--;
         });
@@ -221,7 +227,7 @@ class _PhonePageAuthState extends State<PhonePageAuth> {
               onTap: wait
                   ? null
                   : () async {
-                      StartTimer();
+                      startTimer();
                       setState(() {
                         start = 59;
                         wait = true;
@@ -249,6 +255,6 @@ class _PhonePageAuthState extends State<PhonePageAuth> {
     setState(() {
       verificationIDFinal = verificationID;
     });
-    StartTimer();
+    startTimer();
   }
 }

@@ -31,16 +31,23 @@ class _SignInPageState extends State<SignInPage> {
             child: Container(
                 height: MediaQuery.of(context).size.height,
                 width: MediaQuery.of(context).size.width,
-                color: Colors.black,
+                color: Color(0xFFDCBBAA),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      'Sign In',
-                      style: TextStyle(
-                          fontSize: 35,
-                          color: Color.fromARGB(255, 255, 255, 255),
-                          fontWeight: FontWeight.bold),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Sign In',
+                          style: TextStyle(
+                              fontSize: 35,
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold),
+                        ),
+                    Image.asset('assets/note.jpg', width: 150, height: 150),
+
+                      ],
                     ),
                     SizedBox(
                       height: 20,
@@ -56,7 +63,7 @@ class _SignInPageState extends State<SignInPage> {
                       height: 15,
                     ),
                     Text('Or',
-                        style: TextStyle(fontSize: 17, color: Colors.white)),
+                        style: TextStyle(fontSize: 17, color: Colors.black)),
                     SizedBox(
                       height: 15,
                     ),
@@ -82,7 +89,7 @@ class _SignInPageState extends State<SignInPage> {
                       children: [
                         Text(
                           "If you don't have an account ?",
-                          style: TextStyle(color: Colors.white, fontSize: 18),
+                          style: TextStyle(color: Colors.black, fontSize: 18),
                         ),
                         SizedBox(
                           width: 3,
@@ -97,7 +104,7 @@ class _SignInPageState extends State<SignInPage> {
                             },
                             child: Text("Register",
                                 style: TextStyle(
-                                    color: Colors.white,
+                                    color: Colors.black,
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold)))
                       ],
@@ -115,7 +122,7 @@ class _SignInPageState extends State<SignInPage> {
                       },
                       child: Text("Forgot password ?",
                           style: TextStyle(
-                              color: Colors.white,
+                              color: Colors.black,
                               fontSize: 18,
                               fontWeight: FontWeight.bold)),
                     )
@@ -131,7 +138,6 @@ class _SignInPageState extends State<SignInPage> {
               await firebaseAuth.signInWithEmailAndPassword(
                   email: _controllerEmail.text,
                   password: _controllerPassword.text);
-
 
           ScaffoldMessenger.of(context)
               .showSnackBar(SnackBar(content: Text('Sign In Successfully')));
@@ -217,12 +223,12 @@ class _SignInPageState extends State<SignInPage> {
         height: 60,
         child: TextFormField(
           keyboardType: inputType,
-          style: TextStyle(fontSize: 17, color: Colors.white),
+          style: TextStyle(fontSize: 17, color: Colors.black),
           controller: controller,
           obscureText: obscureText,
           decoration: InputDecoration(
               labelText: name,
-              labelStyle: TextStyle(fontSize: 17, color: Colors.white),
+              labelStyle: TextStyle(fontSize: 17, color: Colors.black),
               focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(15),
                   borderSide: BorderSide(
