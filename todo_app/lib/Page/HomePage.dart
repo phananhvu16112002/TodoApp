@@ -19,6 +19,7 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:todo_app/Service/notifications_service.dart';
+
 import 'package:share_plus/share_plus.dart';
 
 
@@ -375,9 +376,11 @@ class _HomePageState extends State<HomePage> {
               BottomNavigationBarItem(
                   icon: InkWell(
                       onTap: () {
+                        notifyHelper.displayNotification(title: 'title', body: 'body');
                         // notifyHelper.displayNotification(
                         //     title: "Theme Changed", body: "Go add");
                         Navigator.push(
+                          
                             context,
                             MaterialPageRoute(
                                 builder: (builder) => ProfilePage()));

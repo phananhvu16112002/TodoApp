@@ -139,6 +139,7 @@ class _SignUpPageState extends State<SignUpPage> {
       'email': email,
       'phoneNumber': phoneNumber,
       'sizeText': '',
+      'font':'',
       'soundNotification': '',
       'labels': [],
       'userID': userID

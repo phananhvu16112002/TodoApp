@@ -172,7 +172,26 @@ class _ProfilePageState extends State<ProfilePage> {
                         thickness: 1,
                       ),
                       InkWell(
-                        onTap: () {},
+                        onTap: () {
+                          _showFontWeightInputDialog(context);
+                        },
+                        child: ListTile(
+                          title: Text('Change your font text',
+                              style: GoogleFonts.lato(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black)),
+                          trailing: Icon(Icons.font_download),
+                        ),
+                      ),
+                      Divider(
+                        color: Colors.black,
+                        thickness: 1,
+                      ),
+                      InkWell(
+                        onTap: () {
+                          _showSoundSelectionDialog(context);
+                        },
                         child: ListTile(
                           title: Text('Change your sound notifications',
                               style: GoogleFonts.lato(
@@ -405,12 +424,12 @@ class _ProfilePageState extends State<ProfilePage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Nhập một số từ 10 đến 20'),
+        title: Text('Enter number size text from 10 to 30'),
         content: TextField(
           controller: _numberController,
           keyboardType: TextInputType.number,
           decoration: InputDecoration(
-            hintText: 'Size text from 10 to 20',
+            hintText: 'Size text from 10 to 30',
           ),
         ),
         actions: [
@@ -423,7 +442,7 @@ class _ProfilePageState extends State<ProfilePage> {
             onPressed: () {
               int? number = int.tryParse(_numberController.text);
 
-              if (number != null && number >= 10 && number <= 20) {
+              if (number != null && number >= 10 && number <= 30) {
                 // Do something with the number
                 print("userID: $userID");
                 // print("userRef: ${userRef}");
@@ -444,10 +463,108 @@ class _ProfilePageState extends State<ProfilePage> {
               } else {
                 // Show an error message
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text('Vui lòng nhập số từ 10 đến 20'),
+                  content: Text('Enter number from 10 to 30'),
                   duration: Duration(seconds: 2),
                 ));
               }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSoundSelectionDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Choose a sound'),
+        content: SingleChildScrollView(
+          child: ListBody(
+            children: [
+              ListTile(
+                title: Text('Sound 1'),
+                onTap: () => _updateUserSound('sound_1'),
+              ),
+              ListTile(
+                title: Text('Sound 2'),
+                onTap: () => _updateUserSound('sound_2'),
+              ),
+              ListTile(
+                title: Text('Sound 3'),
+                onTap: () => _updateUserSound('sound_3'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _updateUserSound(String soundName) async {
+    final userID = FirebaseAuth.instance.currentUser?.uid;
+    final userRef = FirebaseFirestore.instance
+        .collection('users')
+        .where('userID', isEqualTo: userID);
+
+    final userQuerySnapshot = await userRef.get();
+    if (userQuerySnapshot.docs.length > 0) {
+      final userDoc = userQuerySnapshot.docs[0];
+      final String soundPath = soundName;
+      userDoc.reference.update({'soundNotification': soundPath});
+    }
+  }
+
+  void _showFontWeightInputDialog(BuildContext context) {
+    FontWeight selectedFontWeight = FontWeight.normal;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Choose font weight'),
+        content: DropdownButtonFormField<FontWeight>(
+          value: selectedFontWeight,
+          items: [
+            DropdownMenuItem(
+              value: FontWeight.normal,
+              child: Text('Normal'),
+            ),
+            DropdownMenuItem(
+              value: FontWeight.bold,
+              child: Text('Bold'),
+            ),
+            DropdownMenuItem(
+              value: FontWeight.w300,
+              child: Text('Light'),
+            ),
+          ],
+          onChanged: (value) {
+            selectedFontWeight = value!;
+          },
+        ),
+        actions: [
+          TextButton(
+            child: Text('Cancel'),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          ElevatedButton(
+            child: Text('OK'),
+            onPressed: () {
+              print("userID: $userID");
+              FirebaseFirestore.instance
+                  .collection('users')
+                  .where('userID', isEqualTo: userID)
+                  .get()
+                  .then((querySnapshot) {
+                querySnapshot.docs.forEach((doc) {
+                  doc.reference.update({'font': selectedFontWeight.toString()});
+                });
+              });
+
+              print(
+                  'You have selected font weight ${selectedFontWeight.toString()}');
+
+              Navigator.of(context).pop();
             },
           ),
         ],

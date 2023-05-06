@@ -21,6 +21,27 @@
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
+            <!-- <meta-data android: name="com.google.firebase.messaging.default_notification_channel_id"
+                        andoird: value = "your channel id"/>
+            <intent-filter> 
+                <action andoird: name = "FLUTTER_NOTIFICATION_CLICK" />
+                <category andoird: name = "android.intent.category.DEFAULT" />
+            </intent-filter> -->
+
+<meta-data
+  android:name="com.google.firebase.messaging.default_notification_channel_id"
+  android:value="channel_id:default_sound" />
+<meta-data
+  android:name="com.google.firebase.messaging.default_notification_channel_id_1"
+  android:value="channel_id:sound_1" />
+<meta-data
+  android:name="com.google.firebase.messaging.default_notification_channel_id_2"
+  android:value="channel_id:sound_2" />
+<meta-data
+  android:name="com.google.firebase.messaging.default_notification_channel_id_3"
+  android:value="channel_id:sound_3" />
+
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>

@@ -1,8 +1,10 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:todo_app/Page/HomePage.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'firestore_services.dart';
 
 class AuthClass {
   GoogleSignIn _googleSignIn = GoogleSignIn(
@@ -18,16 +20,42 @@ class AuthClass {
     try {
       GoogleSignInAccount? googleSignInAccount = await _googleSignIn.signIn();
       if (googleSignInAccount != null) {
+        // Get user details from GoogleSignInAccount object
+        String firstName = googleSignInAccount.displayName!.split(' ')[0];
+        String lastName = googleSignInAccount.displayName!.split(' ')[1];
+        String email = googleSignInAccount.email ?? '';
+        String phoneNumber = '';
+        String userID = googleSignInAccount.id;
+
+        // Get authentication credentials
         GoogleSignInAuthentication googleSignInAuthentication =
             await googleSignInAccount.authentication;
         AuthCredential credential = GoogleAuthProvider.credential(
             idToken: googleSignInAuthentication.idToken,
             accessToken: googleSignInAuthentication.accessToken);
+
         try {
+          // Sign in with Firebase Authentication
           UserCredential userCredential =
               await firebaseAuth.signInWithCredential(credential);
           storeTokenAndData(userCredential);
-          //
+
+          // Check if user with userID exists in Firestore
+          var userDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userID)
+              .get();
+          if (userDoc.exists) {
+            final snackBar = SnackBar(content: Text("User already exists"));
+            ScaffoldMessenger.of(context).showSnackBar(snackBar);
+            return;
+          }
+
+          // Add user details to Firestore
+          await FirestoreService.addUserDetails(
+              firstName, lastName, email, phoneNumber, userID);
+
+          // Navigate to home page
           Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(builder: (builder) => HomePage()),

@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -6,6 +8,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_timezone/flutter_native_timezone.dart';
 import 'package:todo_app/Custom/Notification_Page.dart';
+import 'package:flutter/services.dart' show rootBundle;
 
 class NotificationsService {
   FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -35,8 +38,11 @@ class NotificationsService {
   displayNotification({required String title, required String body}) async {
     print("doing test");
     var androidPlatformChannelSpecifics = new AndroidNotificationDetails(
-        'your channel id', 'your channel name',
-        importance: Importance.max, priority: Priority.high);
+      'channel_id',
+      'your channel name',
+      importance: Importance.max,
+      priority: Priority.high,
+    );
     var iOSPlatformChannelSpecifics = new IOSNotificationDetails();
     var platformChannelSpecifics = new NotificationDetails(
         android: androidPlatformChannelSpecifics,
@@ -53,39 +59,64 @@ class NotificationsService {
   scheduledNotification(int hour, int minutes, var task) async {
     print("Test ScheduleNotification");
     var title = task['title'];
-    var description = task['decription'];
-    await flutterLocalNotificationsPlugin.zonedSchedule(
-        0,
-        "Start Title: $title",
-        "Description: $description",
-        _convertTime(hour, minutes),
-        //  tz.TZDateTime.now(tz.local).add(const Duration(seconds: 5)),
-        const NotificationDetails(
-            android: AndroidNotificationDetails(
-                'your channel id', 'your channel name')),
-        androidAllowWhileIdle: true,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-        matchDateTimeComponents: DateTimeComponents.time,
-        payload: "${title}|" + "${description}|");
-  }
+    var description = task['description'];
+    final userID = FirebaseAuth.instance.currentUser?.uid;
+    final userRef = FirebaseFirestore.instance
+        .collection('users')
+        .where('userID', isEqualTo: userID);
 
-  scheduledDeleteNotification(int hour, int minutes) async {
-    print("Test Delete ScheduleNotification");
-    await flutterLocalNotificationsPlugin.zonedSchedule(
-      0,
-      "Auto Delete Completely",
-      "",
-      _convertTime(hour, minutes),
-      //  tz.TZDateTime.now(tz.local).add(const Duration(seconds: 5)),
-      const NotificationDetails(
-          android: AndroidNotificationDetails(
-              'your channel id', 'your channel name')),
-      androidAllowWhileIdle: true,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time,
-    );
+    await userRef.get().then((querySnapshot) async {
+      if (querySnapshot.docs.isNotEmpty) {
+        var sound = querySnapshot.docs[0].get('soundNotification');
+        if (sound != null) {
+          var index = sound.substring(6);
+          var channel = sound.startsWith('default_')
+              ? 'default_sound'
+              : 'sound_${sound.substring(6)}';
+          final androidDetails = AndroidNotificationDetails(
+            'channel_id:$channel',
+            'your channel name',
+            sound: RawResourceAndroidNotificationSound("$channel"),
+          );
+
+          await flutterLocalNotificationsPlugin.zonedSchedule(
+            0,
+            "Start Title: $title",
+            "Description: $description",
+            _convertTime(hour, minutes),
+            NotificationDetails(android: androidDetails),
+            androidAllowWhileIdle: true,
+            uiLocalNotificationDateInterpretation:
+                UILocalNotificationDateInterpretation.absoluteTime,
+            matchDateTimeComponents: DateTimeComponents.time,
+            payload: "${title}|${description}|",
+          );
+        } else {
+          // set default sound
+          var sound = 'default_sound';
+          var index = sound.substring(6);
+
+          final androidDetails = AndroidNotificationDetails(
+            'channel_id:$index',
+            'your channel name',
+            sound: RawResourceAndroidNotificationSound("$sound"),
+          );
+
+          await flutterLocalNotificationsPlugin.zonedSchedule(
+            0,
+            "Start Title: $title",
+            "Description: $description",
+            _convertTime(hour, minutes),
+            NotificationDetails(android: androidDetails),
+            androidAllowWhileIdle: true,
+            uiLocalNotificationDateInterpretation:
+                UILocalNotificationDateInterpretation.absoluteTime,
+            matchDateTimeComponents: DateTimeComponents.time,
+            payload: "${title}|${description}|",
+          );
+        }
+      }
+    });
   }
 
   Future<void> _configureLocalTimeZone() async {

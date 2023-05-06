@@ -61,6 +61,8 @@ class _ViewNoteState extends State<ViewNote> {
 
   final storage = FirebaseStorage.instance;
   final AudioPlayer audioPlayer = AudioPlayer();
+  int? _userSizeText;
+  FontWeight? _userFont;
 
   List<String> _userLabels = [];
   final colors = [0xFF9A2B3D, 0xFF27C27F, 0xFFDFB43C, 0xFF633997, 0xFFBA3286];
@@ -72,12 +74,87 @@ class _ViewNoteState extends State<ViewNote> {
         .where('userID', isEqualTo: userID);
 
     final userQuerySnapshot = await userRef.get();
-    final userDoc = userQuerySnapshot.docs[0];
-    final userLabels = userDoc.data()?['labels'];
+    if (userQuerySnapshot.docs.length > 0) {
+      final userDoc = userQuerySnapshot.docs[0];
+      final userLabels = userDoc.data()?['labels'];
 
-    setState(() {
-      _userLabels = List<String>.from(userLabels);
-    });
+      setState(() {
+        _userLabels = List<String>.from(userLabels);
+      });
+    }
+  }
+
+  void _getUserFont() async {
+    final userID = FirebaseAuth.instance.currentUser?.uid;
+    final userRef = FirebaseFirestore.instance
+        .collection('users')
+        .where('userID', isEqualTo: userID);
+
+    final userQuerySnapshot = await userRef.get();
+    if (userQuerySnapshot.docs.length > 0) {
+      final userDoc = userQuerySnapshot.docs[0];
+      final userFontWeight = userDoc.data()?['font'] as String?;
+
+      if (userFontWeight != null) {
+        FontWeight userFont;
+        switch (userFontWeight) {
+          case 'w100':
+            userFont = FontWeight.w100;
+            break;
+          case 'w200':
+            userFont = FontWeight.w200;
+            break;
+          case 'w300':
+            userFont = FontWeight.w300;
+            break;
+          case 'w400':
+            userFont = FontWeight.w400;
+            break;
+          case 'w500':
+            userFont = FontWeight.w500;
+            break;
+          case 'w600':
+            userFont = FontWeight.w600;
+            break;
+          case 'w700':
+            userFont = FontWeight.bold;
+            break;
+          case 'w800':
+            userFont = FontWeight.w800;
+            break;
+          case 'w900':
+            userFont = FontWeight.w900;
+            break;
+          default:
+            userFont = FontWeight.normal;
+            break;
+        }
+        setState(() {
+          _userFont = userFont;
+        });
+      }
+    } else {
+      setState(() {
+        _userFont = FontWeight.normal;
+      });
+    }
+  }
+
+  void _getUserSizeText() async {
+    final userID = FirebaseAuth.instance.currentUser?.uid;
+    final userRef = FirebaseFirestore.instance
+        .collection('users')
+        .where('userID', isEqualTo: userID);
+
+    final userQuerySnapshot = await userRef.get();
+    if (userQuerySnapshot.docs.length > 0) {
+      final userDoc = userQuerySnapshot.docs[0];
+      final userSizeText = userDoc.data()?['sizeText'];
+
+      setState(() {
+        _userSizeText = int.parse(userSizeText);
+      });
+    }
   }
 
 // Load and play the audio file from Firebase Storage
@@ -236,6 +313,8 @@ class _ViewNoteState extends State<ViewNote> {
         autoPlay: true,
         looping: false);
     _getUserLabels();
+    _getUserSizeText();
+    _getUserFont();
   }
 
   @override
@@ -903,7 +982,11 @@ class _ViewNoteState extends State<ViewNote> {
       child: TextFormField(
         controller: _noteTitleController,
         enabled: edit,
-        style: TextStyle(color: Colors.white, fontSize: 17),
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: _userSizeText != null ? _userSizeText!.toDouble() : 17.0,
+          fontWeight: _userFont != null ? _userFont : FontWeight.normal,
+        ),
         decoration: InputDecoration(
             border: InputBorder.none,
             hintText: "Note title",
@@ -925,7 +1008,11 @@ class _ViewNoteState extends State<ViewNote> {
       child: TextFormField(
         controller: _noteDescriptionController,
         enabled: edit,
-        style: TextStyle(color: Colors.white, fontSize: 17),
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: _userSizeText != null ? _userSizeText!.toDouble() : 30,
+          fontWeight: _userFont != null ? _userFont : FontWeight.normal,
+        ),
         maxLines: null,
         decoration: InputDecoration(
             border: InputBorder.none,
