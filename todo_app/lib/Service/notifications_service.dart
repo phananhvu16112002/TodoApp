@@ -38,7 +38,7 @@ class NotificationsService {
   displayNotification({required String title, required String body}) async {
     print("doing test");
     var androidPlatformChannelSpecifics = new AndroidNotificationDetails(
-      'channel_id',
+      'channel_id2',
       'your channel name',
       importance: Importance.max,
       priority: Priority.high,

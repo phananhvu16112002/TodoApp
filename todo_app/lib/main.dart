@@ -13,7 +13,13 @@ import 'package:todo_app/Service/Auth_Service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    name: 'todo-web-app',
+      options: FirebaseOptions(
+          apiKey: "AIzaSyCAz7E4UWBMvbgEEwparEe2UbASx7v0Ei0",
+          appId: "1:128593137143:web:9e80d2aa7cc7ec8db772f2",
+          messagingSenderId: "128593137143",
+          projectId: "todo-web-app-cc3d1"));
   runApp(MyApp());
 }
 
