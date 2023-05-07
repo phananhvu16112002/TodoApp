@@ -52,8 +52,6 @@ class _HomePageState extends State<HomePage> {
   int index = 0;
   bool _isPinned = false;
   List<QueryDocumentSnapshot> filteredDocs = [];
-  bool checkPinned = false;
-  List<Map<String, dynamic>> allNotes = [];
 
   @override
   void dispose() {
@@ -421,27 +419,6 @@ class _HomePageState extends State<HomePage> {
                       }
                     }
 
-                    // Tạo danh sách để lưu trữ các ghi chú đã được pin
-                    List<Map<String, dynamic>> pinnedNotes = [];
-                    // Tạo danh sách để lưu trữ các ghi chú còn lại
-                    List<Map<String, dynamic>> otherNotes = [];
-                    for (int i = 0; i < snapshot.data!.docs.length; i++) {
-                      Map<String, dynamic> document =
-                          snapshot.data!.docs[i].data() as Map<String, dynamic>;
-                      if (document['Pinned']) {
-                        // Nếu ghi chú được đánh dấu là "pinned", thêm vào danh sách pinnedNotes
-                        pinnedNotes.add(document);
-                      } else {
-                        // Nếu không, thêm vào danh sách otherNotes
-                        otherNotes.add(document);
-                      }
-                    }
-                    // Tạo danh sách chứa tất cả các ghi chú
-                    // Thêm các ghi chú đã được pin vào đầu danh sách
-                    allNotes.addAll(pinnedNotes);
-                    // Thêm các ghi chú còn lại vào cuối danh sách
-                    allNotes.addAll(otherNotes);
-
                     return Column(
                       children: [
                         SizedBox(
@@ -529,7 +506,9 @@ class _HomePageState extends State<HomePage> {
                                               IconData iconData;
                                               Color iconColor;
                                               Map<String, dynamic> document =
-                                                  allNotes[index];
+                                                  snapshot.data!.docs[index]
+                                                          .data()
+                                                      as Map<String, dynamic>;
                                               if (document['Repeat'] == 'Daily')
                                                 notifyHelper
                                                     .scheduledNotification(
@@ -578,12 +557,10 @@ class _HomePageState extends State<HomePage> {
                                                   false));
                                               return GestureDetector(
                                                   onLongPress: () {
-                                                    _pinNote(
-                                                        snapshot.data!
-                                                            .docs[index].id,
-                                                        document['Pinned'],
-                                                        !document['Pinned']);
-                                                  print(allNotes);
+                                                    _showOptionsDialog(
+                                                        context,
+                                                        snapshot
+                                                            .data!.docs[index]);
                                                   },
                                                   onTap:
                                                       document['Completed'] ||
@@ -1575,7 +1552,9 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Future<void> _pinNote(String noteId, bool pinned, bool newPinnedValue) async {
+  Future<void> _pinNote(String noteId, bool pinned) async {
+    bool newPinnedValue = !pinned; // Lấy giá trị đảo ngược của Pinned
+
     await showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -1598,22 +1577,70 @@ class _HomePageState extends State<HomePage> {
                     .collection('NoteTask')
                     .doc(noteId)
                     .update({
-                  'Pinned': newPinnedValue,
-                }).then((value) {
-                  setState(() {
-                    // Xác định xem ghi chú được chọn có phải là ghi chú đầu tiên trong danh sách allNotes không
-                    if (allNotes[0]['NoteID'] == noteId) {
-                      // Nếu đúng, thay đổi giá trị của ghi chú này và thêm nó vào cuối danh sách
-                      Map<String, dynamic> noteToMove = allNotes.removeAt(0);
-                      noteToMove['Pinned'] = newPinnedValue;
-                      allNotes.add(noteToMove);
-                    }
-                  });
-                  Navigator.pop(context);
+                  'Pinned': newPinnedValue, // Cập nhật giá trị Pinned mới
                 });
+                Navigator.pop(context);
               },
             ),
           ],
+        );
+      },
+    );
+  }
+
+  void _showOptionsDialog(BuildContext context, DocumentSnapshot doc) {
+    bool isPinned = doc['Pinned'];
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              ListTile(
+                leading: isPinned ? Icon(Icons.push_pin) : Icon(Icons.pin_drop),
+                title: isPinned ? Text('Unpin note') : Text('Pin note to top'),
+                onTap: () async {
+                  if (isPinned == true) {
+                    await FirebaseFirestore.instance
+                        .collection('NoteTask')
+                        .doc(doc.id)
+                        .update({'Pinned': false});
+                  } else {
+                        await FirebaseFirestore.instance
+                        .collection('NoteTask')
+                        .doc(doc.id)
+                        .delete();
+                    await FirebaseFirestore.instance
+                        .collection("NoteTask")
+                        .add({
+                      "title": doc['title'],
+                      "task": doc['task'],
+                      "Category": doc['Category'],
+                      "decription": doc['decription'],
+                      "FileNotes": doc['FileNotes'],
+                      "AudioNotes": doc['AudioNotes'],
+                      "VideoNotes": doc['VideoNotes'],
+                      "DateFinish": doc['DateFinish'],
+                      "TimeStart": doc['TimeStart'],
+                      "TimeFinish": doc['TimeFinish'],
+                      "isDeleted": doc['isDeleted'],
+                      "TimeDelete": doc['TimeDelete'],
+                      "Remind": doc['Remind'],
+                      "Repeat": doc['Repeat'],
+                      "Completed": doc['Completed'],
+                      "Password": doc['Password'],
+                      "Protected": doc['Protected'],
+                      "Pinned": true,
+                      "userID": doc['userID']
+                    });
+                  }
+                  Navigator.pop(context);
+                  // setState(() {});
+                },
+              ),
+            ],
+          ),
         );
       },
     );
