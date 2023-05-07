@@ -651,7 +651,7 @@ class _HomePageState extends State<RecycleBin> {
                                                   isDeleted:
                                                       document['isDeleted'],
                                                   timeDelete:
-                                                      document['TimeDelete'],
+                                                      document['TimeDelete'], Pinned: document['Pinned'],
                                                 )
                                               : Container(),
                                         ));

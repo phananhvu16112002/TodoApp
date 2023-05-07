@@ -51,6 +51,7 @@ class _HomePageState extends State<HomePage> {
   String? selectedCategory;
   int index = 0;
   bool _isPinned = false;
+  List<QueryDocumentSnapshot> filteredDocs = [];
 
   @override
   void dispose() {
@@ -409,8 +410,9 @@ class _HomePageState extends State<HomePage> {
                       return Center(child: Text('Error'));
                     }
                     final docs = snapshot.data!.docs;
+                    List<Map<String, dynamic>> pinnedNotes = [];
+                    List<Map<String, dynamic>> otherNotes = [];
                     var count = 0;
-                    List<QueryDocumentSnapshot> filteredDocs = [];
                     for (int i = 0; i < docs.length; i++) {
                       var temp =
                           snapshot.data!.docs[i].data() as Map<String, dynamic>;
@@ -418,6 +420,21 @@ class _HomePageState extends State<HomePage> {
                         count++;
                       }
                     }
+
+                    for (int i = 0; i < docs.length; i++) {
+                      var temp =
+                          snapshot.data!.docs[i].data() as Map<String, dynamic>;
+                      if (temp['Pinned'] == true) {
+                        pinnedNotes.add(temp);
+                      } else {
+                        otherNotes.add(temp);
+                      }
+                    }
+
+                    List<Map<String, dynamic>> allNotes = [];
+                    allNotes.addAll(pinnedNotes);
+                    allNotes.addAll(otherNotes);
+
                     return Column(
                       children: [
                         SizedBox(
@@ -556,12 +573,10 @@ class _HomePageState extends State<HomePage> {
                                                   false));
                                               return GestureDetector(
                                                   onLongPress: () {
-                                                    setState(() {
-                                                      _isPinned = !_isPinned;
-                                                      document['Pinned'] =
-                                                          _isPinned; // lưu trạng thái ghim vào firestore
-                                                      // nếu cần, cập nhật trạng thái ghim trong danh sách của app
-                                                    });
+                                                    _pinNote(
+                                                        snapshot.data!
+                                                            .docs[index].id,
+                                                        document['Pinned']);
                                                   },
                                                   onTap:
                                                       document['Completed'] ||
@@ -971,6 +986,8 @@ class _HomePageState extends State<HomePage> {
                                                                 'isDeleted'],
                                                             timeDelete: document[
                                                                 'TimeDelete'],
+                                                            Pinned: document[
+                                                                'Pinned'],
                                                           )
                                                         : Container(),
                                                   ));
@@ -1551,6 +1568,42 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Future<void> _pinNote(String noteId, bool pinned) async {
+    bool newPinnedValue = !pinned; // Lấy giá trị đảo ngược của Pinned
+
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Pin Note'),
+          content: Text(newPinnedValue
+              ? 'Do you want to pin this note?'
+              : 'Do you want to unpin this note?'),
+          actions: [
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+            ),
+            TextButton(
+              child: Text(newPinnedValue ? 'Pin' : 'Unpin'),
+              onPressed: () {
+                FirebaseFirestore.instance
+                    .collection('NoteTask')
+                    .doc(noteId)
+                    .update({
+                  'Pinned': newPinnedValue, // Cập nhật giá trị Pinned mới
+                });
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _showCategoryFilterDialog() async {
     String? selectedCategoryResult = await showDialog(
       context: context,
@@ -1670,16 +1723,9 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  void _onPressedComplete(String noteId) {
-    FirebaseFirestore.instance
-        .collection("NoteTask")
-        .doc(noteId)
-        .update({'Completed': true})
-        .then((value) => print("Note Updated"))
-        .catchError((error) => print("Failed to update note: $error"));
-  }
-
   void _searchNotes(String query) {
+    // var userID = FirebaseAuth.instance.currentUser?.uid;
+
     List<Map<String, dynamic>> results = [];
     if (query.isEmpty) {
       setState(() {

@@ -18,6 +18,7 @@ class NoteCard extends StatelessWidget {
     required this.description,
     required this.isDeleted,
     required this.timeDelete,
+    required this.Pinned,
   }) : super(key: key);
 
   final String title;
@@ -35,6 +36,7 @@ class NoteCard extends StatelessWidget {
   final String description;
   final bool isDeleted;
   final String timeDelete;
+  final bool Pinned;
 
   @override
   Widget build(BuildContext context) {
@@ -142,6 +144,13 @@ class NoteCard extends StatelessWidget {
                                   )),
                             ],
                           ),
+                          SizedBox(height: 2,),
+                          Icon(
+                              Pinned == true
+                                  ? Icons.pin_invoke
+                                  : null,
+                              size: 15,
+                              color: Colors.red),
                         ],
                       ),
                       SizedBox(
